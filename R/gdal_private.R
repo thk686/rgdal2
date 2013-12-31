@@ -12,14 +12,12 @@ newRGDAL2Dataset = function(handle)
 newRGDAL2RasterBand = function(handle, dataset)
 {
     if ( isNullPtr(handle) ) return(NULL)
-    attr(handle, "class") = NULL
     new("RGDAL2RasterBand", handle = handle, dataset = dataset)
 }
 
 newRGDAL2RasterMask = function(handle, dataset, flag)
 {
     if ( isNullPtr(handle) ) return(NULL)
-    attr(handle, "class") = NULL
     new("RGDAL2RasterMask", handle = handle, dataset = dataset, flag = flag)
 }
 

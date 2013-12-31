@@ -21,7 +21,15 @@ GDALGetDescription <- function(handleXPtr) {
     .Call('rgdal2_GDALGetDescription', PACKAGE = 'rgdal2', handleXPtr)
 }
 
-rcpp_hello_world <- function() {
-    .Call('rgdal2_rcpp_hello_world', PACKAGE = 'rgdal2')
+GDALGetRasterBand <- function(handleXPtr, n) {
+    .Call('rgdal2_GDALGetRasterBand', PACKAGE = 'rgdal2', handleXPtr, n)
+}
+
+GDALGetRasterBandXSize <- function(handleXPtr) {
+    .Call('rgdal2_GDALGetRasterBandXSize', PACKAGE = 'rgdal2', handleXPtr)
+}
+
+GDALGetRasterBandYSize <- function(handleXPtr) {
+    .Call('rgdal2_GDALGetRasterBandYSize', PACKAGE = 'rgdal2', handleXPtr)
 }
 

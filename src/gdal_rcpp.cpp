@@ -43,3 +43,25 @@ const char* GDALGetDescription(SEXP handleXPtr)
   XPtr<GDALDataset> handle(handleXPtr);
   return handle->GetDescription();  
 }
+
+// [[Rcpp::export]]
+SEXP GDALGetRasterBand(SEXP handleXPtr, int n)
+{
+  XPtr<GDALDataset> handle(handleXPtr);
+  GDALRasterBand* b = handle->GetRasterBand(n);
+  return XPtr<GDALRasterBand>(b, false);
+}
+
+// [[Rcpp::export]]
+int GDALGetRasterBandXSize(SEXP handleXPtr)
+{
+  XPtr<GDALRasterBand> handle(handleXPtr);
+  return handle->GetXSize();
+}
+
+// [[Rcpp::export]]
+int GDALGetRasterBandYSize(SEXP handleXPtr)
+{
+  XPtr<GDALRasterBand> handle(handleXPtr);
+  return handle->GetYSize();
+}
