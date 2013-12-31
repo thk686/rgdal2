@@ -1,11 +1,14 @@
 #include "pkg_config.h"
 #include <gdal.h>
 #include <gdal_priv.h>
+#include <gdal_alg.h>
+#include <ogr_api.h>
+#include <ogr_srs_api.h>
 #include <Rcpp.h>
 using namespace Rcpp;
 
 // [[Rcpp::export]]
-SEXP GDALInit(const char* x = "dummy")
+SEXP GDALInit(const char* ignored = "dummy")
 {
   GDALAllRegister();
   return R_NilValue;
@@ -66,3 +69,16 @@ int GDALGetRasterBandYSize(SEXP handleXPtr)
   return handle->GetYSize();
 }
 
+// [[Rcpp::export]]
+const char* versionInfo(const char* what = "--version")
+{
+  return GDALVersionInfo(what);
+}
+
+// [[Rcpp::export]]
+SEXP RGDAL_CleanupAll(const char* ignored = "dummy")
+{
+    OGRCleanupAll();
+    OSRCleanup();
+    return R_NilValue;
+}

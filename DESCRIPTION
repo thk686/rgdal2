@@ -1,11 +1,11 @@
 Package: rgdal2
 Type: Package
-Title: What the package does (short line)
-Version: 1.0
+Title: Wraps the Geospatial Data Abstraction Library
+Version: 0.0
 Date: 2013-12-30
-Author: Who wrote it
-Maintainer: Who to complain to <yourfault@somewhere.net>
-Description: More about what it does (maybe more than one line)
-License: What Licence is it under ?
-Depends: Rcpp (>= 0.10.6)
+Author: Tim Keitt
+Maintainer: Tim Keitt <tkeitt@gmail.com>
+Description: Reads and writes GIS data files
+License: GPL
+Depends: Rcpp (>= 0.10.6), methods, grDevices, iterators, foreach, RColorBrewer, grid
 LinkingTo: Rcpp
