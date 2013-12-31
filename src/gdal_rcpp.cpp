@@ -65,3 +65,4 @@ int GDALGetRasterBandYSize(SEXP handleXPtr)
   XPtr<GDALRasterBand> handle(handleXPtr);
   return handle->GetYSize();
 }
+
