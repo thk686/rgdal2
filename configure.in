@@ -1,0 +1,44 @@
+dnl Process this file with autoconf to produce a configure script.
+AC_INIT(src/rcpp_hello_world.cpp)
+
+: ${R_HOME=`R RHOME`}
+if test -z "${R_HOME}"; then
+  echo "could not determine R_HOME"
+  exit 1
+fi
+CC=`"${R_HOME}/bin/R" CMD config CC`
+CFLAGS=`"${R_HOME}/bin/R" CMD config CFLAGS`
+CPPFLAGS=`"${R_HOME}/bin/R" CMD config CPPFLAGS`
+
+if test `gdal-config --version`
+then
+	GDAL_CPPFLAGS=`gdal-config --cflags`
+	GDAL_LIBS=`gdal-config --libs`
+else
+	echo ''
+	echo 'I was unable to find the gdal-config script distributed with'
+	echo 'GDAL. If you have not installed the GDAL libraries, you can'
+	echo 'download the source from  http://www.remotesensing.org/gdal/'
+	echo 'If you have installed the GDAL libraries, then make sure that'
+	echo 'gdal-config is in your path. Try typing gdal-config at a'
+	echo 'shell prompt and see if it runs. If not, find it and add its'
+	echo 'path to your shell path.'
+	echo ''
+	exit 1
+fi
+
+RCPP_LIBS=`${R_HOME}/bin/Rscript -e "Rcpp:::LdFlags()"`
+
+PKG_CPPFLAGS=$GDAL_CPPFLAGS
+PKG_LIBS="$RCPP_LIBS $GDAL_LIBS"
+
+AC_CHECK_SIZEOF(int)
+AC_CHECK_SIZEOF(double)
+
+AC_SUBST(PKG_CPPFLAGS)
+AC_SUBST(PKG_LIBS)
+AC_SUBST(SIZEOF_INT)
+AC_SUBST(SIZEOF_DOUBLE)
+AC_CONFIG_HEADERS(src/pkg_config.h)
+AC_OUTPUT(src/Makevars)
+

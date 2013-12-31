@@ -1,0 +1,2 @@
+useDynLib(rgdal2)
+exportPattern("^[[:alpha:]]+")

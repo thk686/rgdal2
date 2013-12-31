@@ -1,0 +1,45 @@
+#include "pkg_config.h"
+#include <gdal.h>
+#include <gdal_priv.h>
+#include <Rcpp.h>
+using namespace Rcpp;
+
+// [[Rcpp::export]]
+SEXP GDALInit(const char* x = "dummy")
+{
+  GDALAllRegister();
+  return R_NilValue;
+}
+
+// [[Rcpp::export]]
+SEXP GDALOpen(const char* file,
+              bool readonly = true,
+              bool shared = true)
+{
+  GDALAccess access = readonly ? GA_ReadOnly : GA_Update;
+  GDALDataset* handle = shared ?
+    (GDALDataset*) GDALOpenShared(file, access) :
+    (GDALDataset*) GDALOpen(file, access);
+  return XPtr<GDALDataset>(handle, false);
+}
+
+// [[Rcpp::export]]
+SEXP GDALClose(SEXP handleXPtr)
+{
+  XPtr<GDALDataset> handle(handleXPtr);
+  GDALClose(&*handle);
+  return handle;
+}
+
+// [[Rcpp::export]]
+bool isNullPtr(SEXP x)
+{
+  return EXTPTR_PTR(x) == NULL;
+}
+
+// [[Rcpp::export]]
+const char* GDALGetDescription(SEXP handleXPtr)
+{
+  XPtr<GDALDataset> handle(handleXPtr);
+  return handle->GetDescription();  
+}

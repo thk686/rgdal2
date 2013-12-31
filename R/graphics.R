@@ -1,0 +1,233 @@
+#
+# Copyright Timothy H. Keitt
+#
+
+#
+# Grid stuff
+#
+
+geometryGrob = function(object, ..., units = "native")
+{
+    points = getPoints(object)
+    switch(OGR_G_GetGeometryType(object@handle),
+           wkbPoint = pointsGrob(points$x, points$y, default.units = units, ...),
+           wkbLinearRing = polylineGrob(points$x, points$y, default.units = units, ...),
+           wkbLineString = linesGrob(points$x, points$y, default.units = units, ...),
+           wkbMultiLineString = multiLineGrob(points, default.units = units, ...),
+           wkbPolygon = polygonGrob(points$x, points$y, default.units = units, ...),
+           wkbMultiPolygon = multiPolygonGrob(points, default.units = units, ...),
+           wkbPoint25D = pointsGrob(points$x, points$y, default.units = units, ...),
+           wkbLineString25D = linesGrob(points$x, points$y, default.units = units, ...),
+           wkbMultiLineString25D = multiLineGrob(points, default.units = units, ...),
+           wkbPolygon25D = polygonGrob(points$x, points$y, default.units = units, ...),
+           wkbMultiPolygon25D = multiPolygonGrob(points, default.units = units, ...),
+           wkbMultiPoint = pointsGrob(points$x, points$y, default.units = units, ...),
+           wkbMultiPoint25D = pointsGrob(points$x, points$y, default.units = units, ...),
+           stop("Conversion to grid object not implemented"))
+}
+
+setGeneric("draw",
+function(object, ..., region = extent(object), overlay = FALSE, recording = TRUE)
+{
+    standardGeneric("draw")
+})
+
+setMethod("draw", "RGDAL2Geometry",
+function(object, ..., region = extent(object), overlay = FALSE, recording = TRUE)
+{
+    if ( ! overlay ) 
+    {
+        grid.newpage()
+        pushViewport(viewport(width = 0.8, height = 0.8))
+        setViewport(region)
+    }
+    grid.draw(geometryGrob(object, ...), recording = recording)
+    invisible(object)
+})
+
+setMethod("draw", "RGDAL2Layer",
+function(object, ..., region = extent(object), overlay = FALSE, recording = TRUE)
+{
+    if ( ! overlay ) 
+    {
+        grid.newpage()
+        pushViewport(viewport(width = 0.8, height = 0.8))
+        setViewport(region)
+    }
+    draw.fun = function(x) draw(x, ..., overlay = TRUE, recording = recording)
+    lapplyGeometries(object, draw.fun)
+    invisible(object)
+})
+
+setMethod("draw", "RGDAL2RasterBand",
+function(object, ..., dpi = 100, region = extent(object), overlay = FALSE, recording = TRUE)
+{
+    if ( ! overlay ) 
+    {
+        grid.newpage()
+        pushViewport(viewport(width = 0.8, height = 0.8))
+        setViewport(region)
+    }
+    grid.draw(rasterBandGrob(object, dpi = dpi, region = region, ...), recording = recording)
+    invisible(object)
+})
+
+setMethod("draw", "RGDAL2Dataset",
+function(object, ..., dpi = 100, region = extent(object), overlay = FALSE, recording = TRUE)
+{
+    if ( ! overlay ) 
+    {
+        grid.newpage()
+        pushViewport(viewport(width = 0.8, height = 0.8))
+        setViewport(region)
+    }
+    grid.draw(rasterDatasetGrob(object, dpi = dpi, region = region, ...), recording = recording)
+    invisible(object)
+})
+
+setViewport = function(object, ..., recording = TRUE)
+{
+    pushViewport(extentViewport(object, ...), recording = recording)   
+}
+
+extentViewport = function(object, ...)
+{
+    points = getPoints(extent(object), collapse = TRUE)
+    xscale = range(points$x); yscale = range(points$y)
+    obj.asp = diff(yscale) / diff(xscale)
+    vp.asp = current.viewport.aspect()
+    width = 1; height = obj.asp / vp.asp
+    width = width / max(width, height)
+    height = height / max(width, height)
+    viewport(width = unit(width, "npc"), height = unit(height, "npc"), 
+             xscale = unit(xscale, "native"), yscale = unit(yscale, "native"), ...)
+}
+
+rasterBandGrob = function(object,
+                          dpi = 100,
+                          region = extent(object),
+                          col = defaultRGDALPalette(),
+                          by.rank = TRUE,
+                          units = "native",
+                          ...)
+{
+    object = checkBand(object)
+    pts = getPoints(extent(region), collapse = TRUE)
+    width = diff(range(pts$x)); height = diff(range(pts$y))
+    if ( is.finite(dpi) ) 
+    {
+        dim.in = dim(object)
+        dim.out = round(dpi * rev(current.viewport.size()))
+        if ( any(dim.out > dim.in) ) dim.out = dim.in
+        ii = 1L:dim.out[1]; jj = 1L:dim.out[2]
+        rast = if ( by.rank ) scale01(asRanked(object[region, ii = ii, jj = jj]))
+               else scale01(object[region, ii = ii, jj = jj])
+    }
+    else
+    {
+        rast = if ( by.rank ) scale01(asRanked(object[region]))
+               else scale01(object[region])
+    }
+    if ( length(col) ) rast[] = col[1 + rast * (length(col) - 1)]
+    rasterGrob(rast, width = width, height = height, default.units = units, ...)
+}
+
+rasterDatasetGrob = function(object,
+                             dpi = 100,
+                             bands = 1L:3L,
+                             region = extent(object),
+                             units = "native",
+                             ...)
+{
+    object = checkDataset(object)
+    if ( length(bands) == 1 )
+        return(rasterBandGrob(getBand(object, bands)))
+    bands = rep(bands, length.out = 3L)
+    pts = getPoints(extent(region), collapse = TRUE)
+    width = diff(range(pts$x)); height = diff(range(pts$y))
+    has.alpha = getMaskFlags(getMask(object))$is.alpha
+    nbands.out = ifelse(has.alpha, 4L, 3L)
+    if ( is.finite(dpi) ) 
+    {
+        dim.in = dim(object)[1:2]
+        dim.out = round(dpi * rev(current.viewport.size()))
+        if ( any(dim.out > dim.in) ) dim.out = dim.in
+        rast = array(dim = c(dim.out, nbands.out))
+        ii = 1L:dim.out[1]; jj = 1L:dim.out[2]
+        for ( i in seq(along = bands) )
+        {
+            b = getBand(object, bands[i])
+            rast[,,i] = scale01(b[region, ii = ii, jj = jj])
+        }
+        if ( has.alpha )
+        {
+            rast[,, nbands.out] = scale01(getMask(object)[region, ii = ii, jj = jj])
+        }
+    }
+    else
+    {
+        dim.out = dim(object)[1:2]
+        rast = array(dim = c(dim.out, nbands.out))
+        for ( i in seq(along = bands) )
+        {
+            b = getBand(object, bands[i])
+            rast[,,i] = scale01(b[region])
+        }
+        if ( has.alpha )
+        {
+            rast[,, nbands.out] = scale01(getMask(object)[region])
+        }
+    }    
+    rasterGrob(rast, width = width, height = height, default.units = units, ...)
+}
+
+pickExtent = function(object = NULL, plot.it = TRUE)
+{
+    p1 = unlist(grid.locator())
+    grid.points(p1[1], p1[2])
+    p2 = unlist(grid.locator())
+    grid.points(p2[1], p2[2])
+    res = makeExtent(min(p1[1], p2[1]), max(p1[1], p2[1]),
+                     min(p1[2], p2[2]), max(p1[2], p2[2]))
+    if ( !is.null(object) ) setSRS(res, getSRS(object))
+    if ( plot.it ) draw(res, overlay = T, gp = gpar(lty = 2, lwd = 2))
+    res
+}
+
+current.viewport.size = function(units = "inches")
+{
+    vp = current.viewport()
+    vi = convertUnit(vp$height, units)
+    wi = convertUnit(vp$width, units)
+    c(width = wi, height = vi)
+}
+
+current.viewport.aspect = function()
+{
+    sz = current.viewport.size()
+    unclass(sz[2]) / unclass(sz[1])
+}
+
+graticule = function(dlat = 10, dlon = 10, linc = 1)
+{
+    latlon = newSRS(EPSG = 4326)
+    g = newGeometry('wkbMultiLineString', SRS = latlon)
+    for ( lon in seq(-180, 180, by = dlon) )
+    {
+        pts = list(x = rep(lon, 2), y = c(-90, 90))
+        gg = newGeometry('wkbLineString', pts, latlon)
+        OGR_G_Segmentize(gg@handle, linc)
+        addGeometry(g, gg)
+    }
+    for ( lat in seq(-90, 90, by = dlat) )
+    {
+        pts = list(x = c(-180, 180), y = rep(lat, 2))
+        gg = newGeometry('wkbLineString', pts, latlon)
+        OGR_G_Segmentize(gg@handle, linc)
+        addGeometry(g, gg)
+    }
+    return(g)
+}
+
+
+
