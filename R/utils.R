@@ -1,7 +1,8 @@
 getConsoleLines = function(default = 40)
 {
+    term = Sys.getenv("TERM")
     tput = Sys.which('tput')
-    if ( nchar(tput) > 0 )
+    if ( nchar(tput) > 0 && nchar(term) > 0 )
     {
         res = system(paste(tput, "lines"), intern = TRUE)
         if ( attr(res, "status") ) lines = default

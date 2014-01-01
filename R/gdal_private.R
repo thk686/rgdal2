@@ -4,20 +4,17 @@
 
 newRGDAL2Dataset = function(handle)
 {
-    if ( isNullPtr(handle) ) return(NULL)
     reg.finalizer(handle, GDALClose, TRUE)
     new("RGDAL2Dataset", handle = handle)
 }
 
 newRGDAL2RasterBand = function(handle, dataset)
 {
-    if ( isNullPtr(handle) ) return(NULL)
     new("RGDAL2RasterBand", handle = handle, dataset = dataset)
 }
 
 newRGDAL2RasterMask = function(handle, dataset, flag)
 {
-    if ( isNullPtr(handle) ) return(NULL)
     new("RGDAL2RasterMask", handle = handle, dataset = dataset, flag = flag)
 }
 

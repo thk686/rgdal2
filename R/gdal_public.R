@@ -2,31 +2,120 @@
 # Copyright Timothy H. Keitt
 #
 
+#' Open a GDAL dataset
+#'
+#' Opens the dataset associated with the specified file
+#' 
+#' @param fname the file name
+#' @param readonly if true, prohibit write operations
+#' @param shared if true, share the internal GDAL handle
+#' 
+#' @return an object of class RGDAL2Dataset
+#' 
+#' @author Timothy H. Keitt
+#' 
+#' @examples
+#' f = system.file("example-data/butterfly.jpg", package = "rgdal2")
+#' x = openGDAL(f)
+#' show(x)
+#'   
+#' @export
 openGDAL = function(fname, readonly = TRUE, shared = TRUE)
 {
   x = GDALOpen(fname, readonly, shared)
   newRGDAL2Dataset(x)
 }
 
+#' Open a GDAL dataset and return a band
+#'
+#' Opens the dataset associated with the specified file and returns a band
+#' 
+#' @param fname the file name
+#' @oaran babd the band number (1-based)
+#' @param readonly if true, prohibit write operations
+#' 
+#' @return an object of class RGDAL2RasterBand
+#' 
+#' @author Timothy H. Keitt
+#'
+#' @examples
+#' f = system.file("example-data/butterfly.jpg", package = "rgdal2")
+#' x = openGDALBand(f)
+#' show(x)
+#'   
+#' @export
 openGDALBand = function(fname, band = 1L, readonly = TRUE)
 {
   getBand(openGDAL(fname, readonly), band)
 }
 
+#' Create a new GDAL dataset
+#'
+#' @param nrow number of rows (scan lines)
+#' @param ncol number of columns (pixels)
+#' @param nbands number of bands
+#' @param dataType the storage data type (see details)
+#' @param driver the name of the dataset driver
+#' @param file the name of the file to create
+#' @param nosave unlink the file after creation
+#' 
+#' @details
+#' For most purposed, only the "GTiff" and "MEM" drivers are needed. "GTiff"
+#' creates a geotiff file-based dataset. The "MEM" driver creates the dataset
+#' in memory and the data will not be saved unless the dataset is copied to a
+#' file-based dataset. Similarly, if \code{nosave} is true, then a dataset will
+#' be created on disk, but the underlying file will be unlinked. This may be useful
+#' for dealing with huge temporary datasets beyond memory capacity. Once a dataset
+#' is closed (this will happen automatically if the dataset object goes out of scope),
+#'  all data will be lost unless the dataset is copied to another file-based dataset. 
+#' 
+#' The data type is given as a string, and can be one of Byte, Int16, Int32,
+#' Float32, Float64. These strings are the same as the GDALDataType enum in the GDAL
+#' distribution, but with the prefix "GDT_" removed. Other data types have limited
+#' support. See \url{http://www.gdal.org} for more information.
+#' 
+#' @return an object of class RGDAL2Dataset
+#' 
+#' @author Timothy H. Keitt
+#' 
+#' @seealso \code{\link{copyDataset}}
+#' 
+#' @examples
+#' x = newGDALDataset(100, 100, 3, driver = "GTiff", nosave = TRUE)
+#' show(x); dim(x)
+#'   
+#' @export
 newGDALDataset = function(nrow, ncol, nbands = 1,
-                          dataType = 'GDT_Float64', driver = 'MEM',
-                          file = tempfile())
+                          dataType = 'Int32', driver = 'MEM',
+                          file = tempfile(), nosave = FALSE)
 {
   x = RGDALCreateDataset(driver, file, nrow, ncol, nbands, dataType)
-  if ( driver != 'MEM' )
-  {
-    GDALClose(x) #This seems to improve reliability
-    x = GDALOpen(file, 'GA_Update')
-  }
-  else unlink(file)
+  if ( driver == 'MEM' || nosave ) unlink(file)
   newRGDAL2Dataset(x)
 }
 
+#' Copy a GDAL dataset
+#'
+#' Copies a source dataset to a new dataset
+#' 
+#' @param x the source dataset
+#' @param file the file for the new dataset
+#' @param driver the driver for the new dataset
+#' 
+#' @details
+#' The \code{file} parameter is ignored if the \code{driver} parameter
+#' is set to "MEM".
+#' 
+#' @return an object of class RGDAL2Dataset
+#' 
+#' @author Timothy H. Keitt
+#' 
+#' @examples
+#' x = newGDALDataset(10, 10, 3)
+#' y = copyDataset(x)
+#' show(x); show(y)
+#'   
+#' @export
 copyDataset = function(x, file = tempfile(), driver = "MEM")
 {
     assertClass(x, "RGDAL2Dataset")
@@ -34,6 +123,24 @@ copyDataset = function(x, file = tempfile(), driver = "MEM")
     newRGDAL2Dataset(handle)
 }
 
+#' Retrieve the affine transformation
+#'
+#' Retrieves an offset vector and a rotation matrix that allows
+#' projection from pixel, scan-line (row, column) indices to
+#' geospatial coordinates.
+#' 
+#' @param object a dataset or raster band
+#' 
+#' @return
+#' a 2-element list:
+#' \item{transl}{a 2-element vector giving the x and y offsets}
+#' \item{affmat}{a 2x2 scale-rotation matrix}
+#' 
+#' @author Timothy H. Keitt
+#' 
+#' @seealso \code{\link{setTransform}}, \code{\link{copyTransform}}
+#' 
+#' @export
 getTransform = function(object)
 {
     object = checkDataset(object)
@@ -42,6 +149,22 @@ getTransform = function(object)
          affmat = matrix(res[c(2, 3, 5, 6)], 2))
 }
 
+#' Sets the affine transformation
+#'
+#' Sets the affine transform coefficients on a dataset. These
+#' allow projection from pixel, scan-line (row, column) indices to
+#' geospatial coordinates.
+#' 
+#' @param object a dataset or raster band
+#' @param transform a list a returned by \code{\linke{getTransform}}
+#' 
+#' @return the dataset invisibly
+#' 
+#' @author Timothy H. Keitt
+#' 
+#' @seealso \code{\link{getTransform}}, \code{\link{copyTransform}}
+#' 
+#' @export
 setTransform = function(object, transform)
 {
     object = checkDataset(object)
@@ -55,6 +178,21 @@ setTransform = function(object, transform)
     invisible(object)
 }
 
+#' Copies affine transform coefficients
+#'
+#' The affine transform coefficients are copied from one dataset
+#' to another.
+#' 
+#' @param obj1 the source dataset or raster band
+#' @param obj2 the target dataset or raster band
+#' 
+#' @return the target dataset invisibly
+#' 
+#' @author Timothy H. Keitt
+#' 
+#' @seealso \code{\link{getTransform}}, \code{\link{setTransform}}
+#' 
+#' @export
 copyTransform = function(obj1, obj2)
 {
     obj1 = checkDataset(obj1)
@@ -63,18 +201,58 @@ copyTransform = function(obj1, obj2)
     invisible(obj2)
 }
 
-newGDALBand = function(nrow, ncol, dataType = 'GDT_Float64',
+#' Create a new GDAL raster band
+#' 
+#' This is a convenience wrapper around \code{\link{newGDALDataset}}. It
+#' calls \code{\link{newGDALDataset}} and then returns the first band.
+#'
+#' @param nrow number of rows (scan lines)
+#' @param ncol number of columns (pixels)
+#' @param nbands number of bands
+#' @param dataType the storage data type
+#' @param driver the name of the dataset driver
+#' @param file the name of the file to create
+#' 
+#' @return an object of class RGDAL2RasterBand
+#' 
+#' @author Timothy H. Keitt
+#' 
+#' @seealso \code{\link{newGDALDataset}}
+#' 
+#' @examples
+#' x = newGDALBand(100, 100, 3)
+#' show(x); dim(x)
+#' y = getDataset(x)
+#' show(y)
+#'   
+#' @export
+newGDALBand = function(nrow, ncol, dataType = 'Int32',
                        driver = 'MEM', file = tempfile())
 {
     getBand(newGDALDataset(nrow, ncol, 1L, dataType, driver, file))
 }
 
-makeTestDataset = function()
-{
-    x = RGDALMakeTestDataset();
-    newRGDAL2Dataset(x)
-}
-
+#' Fetch a raster band object from a dataset
+#' 
+#' @param x a dataset object
+#' @param band the band number
+#' 
+#' @details
+#' Band indices start at 1.
+#' 
+#' @return an object of class RGDAL2RasterBand
+#' 
+#' @author Timothy H. Keitt
+#' 
+#' @seealso \code{\link{newGDALBand}}, \code{\link{nband}}
+#' 
+#' @examples
+#' x = newGDALDataset(100, 100, 3)
+#' show(x); dim(x)
+#' y = getBand(x, 2)
+#' show(y)
+#'   
+#' @export
 getBand = function(x, band = 1L)
 {
   assertClass(x, 'RGDAL2Dataset')
@@ -82,6 +260,28 @@ getBand = function(x, band = 1L)
   newRGDAL2RasterBand(b, x)
 }
 
+#' Fetch the dataset owning a raster band
+#' 
+#' @param x a raster band object
+#' 
+#' @details
+#' Raster bands are always associated with a dataset and cannot
+#' be deleted. This function fetches the dataset to which the
+#' raster band belongs.
+#' 
+#' @return an object of class RGDAL2Dataset
+#' 
+#' @author Timothy H. Keitt
+#' 
+#' @seealso \code{\link{getBand}}
+#' 
+#' @examples
+#' x = newGDALBand(100, 100)
+#' show(x)
+#' y = getDataset(x)
+#' show(y)
+#'   
+#' @export
 getDataset = function(x)
 {
     assertClass(x, 'RGDAL2RasterBand')
@@ -92,7 +292,6 @@ getColorTable = function(x)
 {
   x = checkBand(x)
   x = RGDALGetRasterColorTable(x@handle)
-  attr(x, 'class') = NULL
   as.matrix(x)
 }
 

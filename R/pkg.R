@@ -3,6 +3,7 @@
 #
 .onAttach = function(libname, pkgname)
 {
+    GDALInit()
     quiet = getOption("suppress.package.banners")
     if ( is.null(quiet) || (!quiet) )
     {
