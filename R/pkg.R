@@ -24,10 +24,9 @@
 #' convertable to grid graphics objects. A generic \code{draw} function is
 #' provided for building plots.
 #' @author
-#' Timothy H. Keitt
-#' \link{http://www.keittlab.org/}
-#' Maintainer: Timothy H. Keitt <tkeitt@gmail.com>
-#' @references \link{http://www.gdal.org/}
+#' Timothy H. Keitt \cr \url{http://www.keittlab.org/} \cr \cr
+#' Maintainer: Timothy H. Keitt \email{tkeitt@@gmail.com} \cr
+#' @references \url{http://www.gdal.org/}
 #' @keywords package
 NULL
 
