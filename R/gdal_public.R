@@ -386,6 +386,18 @@ setMethod('show', 'RGDAL2Dataset', function(object)
     }
 })
 
+#' Display information about a raster band
+#' 
+#' @param object a raster band
+#' 
+#' @seealso \code{\link{show}}
+#' 
+#' @examples
+#' f = system.file("example-data/gtopo30_vandg.tif", package = "rgdal2")
+#' x = openGDALBand(f)
+#' show(x)
+#'
+#' @export
 setMethod('show', 'RGDAL2RasterBand', function(object)
 {
     if ( max(dim(object)) < 20 )
@@ -397,6 +409,18 @@ setMethod('show', 'RGDAL2RasterBand', function(object)
     }
 })
 
+#' Return dimensions of a dataset
+#' 
+#' @param x a dataset
+#' 
+#' @seealso \code{\link{dim}}
+#' 
+#' @examples
+#' f = system.file("example-data/gtopo30_vandg.tif", package = "rgdal2")
+#' x = openGDAL(f)
+#' dim(x)
+#'
+#' @export
 setMethod('dim', 'RGDAL2Dataset', function(x)
 {
     num_rows = GDALGetRasterYSize(x@handle)
@@ -405,6 +429,18 @@ setMethod('dim', 'RGDAL2Dataset', function(x)
     c(num_rows, num_cols, num_bands)
 })
 
+#' Return dimensions of a dataset
+#' 
+#' @param x a dataset
+#' 
+#' @seealso \code{\link{dim}}
+#' 
+#' @examples
+#' f = system.file("example-data/gtopo30_vandg.tif", package = "rgdal2")
+#' x = openGDAL(f)
+#' dim(x)
+#'
+#' @export
 setMethod('dim', 'RGDAL2RasterBand', function(x)
 {
     num_rows = GDALGetRasterBandYSize(x@handle)
@@ -412,15 +448,51 @@ setMethod('dim', 'RGDAL2RasterBand', function(x)
     c(num_rows, num_cols)
 })
 
+#' Return number of raster bands in a dataset
+#' 
+#' @param x a dataset
+#' 
+#' @seealso \code{\link{dim}}
+#' 
+#' @examples
+#' f = system.file("example-data/butterfly.jpg", package = "rgdal2")
+#' x = openGDAL(f)
+#' nband(x)
+#'
+#' @export
 nband = function(x)
 {
     dim(x)[3L]
 }
 
+#' Return the internal blocksize of a dataset
+#' 
+#' @param x a dataset or raster band
+#' 
+#' @details
+#' GDAL datasets can have internal data organized in different ways. Most
+#' datasets are in scanline, pixel (sequential row) arrangement. Other
+#' datasets may be tiled. This allows efficient local access to blocks of
+#' raster data. The GDAL commandline utilities can be used to reblock a
+#' dataset. This function returns the blocksize of the dataset. Block-
+#' aligned access is much more efficient than other data chunking
+#' as GDAL caches whole blocks internally.
+#' 
+#' @note
+#' GDAL uses and x, y or longitude, latitude convention. The \code{rgdal2}
+#' package will always return values as y, x (row, column) or latitude,
+#' longitude.
+#' 
+#' @examples
+#' f = system.file("example-data/gtopo30_vandg.tif", package = "rgdal2")
+#' x = openGDAL(f)
+#' getBlockSize(x)
+#'
+#' @export
 getBlockSize = function(x)
 {
     x = checkBand(x)
-    res = RGDALGetBlockSize(x@handle)
+    res = GDALGetBlockSize(x@handle)
     res
 }
 

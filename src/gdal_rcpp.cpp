@@ -222,7 +222,14 @@ int GDALGetMaskFlags(SEXP x)
   return GDALGetMaskFlags(h);
 }
 
-
+// [[Rcpp::export]]
+std::vector<int> GDALGetBlockSize(SEXP x)
+{
+  GDALDatasetH h = unwrapHandle<GDALDataset>(x);
+  std::vector<int> res(2);
+  GDALGetBlockSize(h, &res[1], &res[0]);
+  return res;
+}
 
 
 
