@@ -156,7 +156,7 @@ getTransform = function(object)
 #' geospatial coordinates.
 #' 
 #' @param object a dataset or raster band
-#' @param transform a list a returned by \code{\linke{getTransform}}
+#' @param transform a list a returned by \code{\link{getTransform}}
 #' 
 #' @return the dataset invisibly
 #' 
@@ -295,6 +295,38 @@ getColorTable = function(x)
   as.matrix(x)
 }
 
+#' Fetch the mask associated with a raster band
+#' 
+#' @param x a raster band or dataset
+#' 
+#' @details
+#' The primary purpose of a mask band is to indicate no-data regions
+#' that should be clipped when drawing and analyzing. A mask band can
+#' also contain alpha values in a RGBA dataset. The meaning of the band
+#' can be ascertained using \code{\link{getMaskFlags}}.
+#' 
+#' Note that if a dataset does not contain a mask, this function will
+#' still construct and return a mask of all true (non-zero) values.
+#' 
+#' As a convenience when working with single band datasets, this function
+#' will automatically extract the first band if a dataset is passed. Other
+#' bands are ignored.
+#' 
+#' @return an object of class RGDAL2RasterMask
+#' 
+#' @author Timothy H. Keitt
+#' 
+#' @seealso \code{\link{getMaskFlags}}
+#' 
+#' @examples
+#' f = system.file("example-data/gtopo30_vandg.tif", package = "rgdal2")
+#' x = openGDALBand(f)
+#' show(x)
+#' getMaskFlags(x)
+#' y = getMask(x)
+#' show(y)
+#' 
+#' @export
 getMask = function(x)
 {
   x = checkBand(x)
@@ -303,12 +335,41 @@ getMask = function(x)
   newRGDAL2RasterMask(m, x@dataset, f)
 }
 
+#' Fetch flags indicating the mask interpretation
+#' 
+#' @param x a raster band, dataset or mask
+#' 
+#' @note
+#' As a convenience when working with single band datasets, this function
+#' will automatically extract the first band if a dataset is passed. Other
+#' bands are ignored.
+#' 
+#' @return
+#' \item{no.mask}{true if there is no stored mask}
+#' \item{is.shared}{true if the mask applies to all bands}
+#' \item{is.alpha}{true if the mask contains alpha transparency values}
+#' \item{is.nodata}{true if the maks indicates valid data}
+#' 
+#' @author Timothy H. Keitt
+#' 
+#' @seealso \code{\link{getMask}}
+#' 
+#' @examples
+#' f = system.file("example-data/gtopo30_vandg.tif", package = "rgdal2")
+#' x = openGDALBand(f)
+#' show(x)
+#' getMaskFlags(x)
+#' 
+#' @export
 getMaskFlags = function(x)
 {
-  list(no.mask = bitwAnd(x@flag, 1L) != 0L,
-       is.shared = bitwAnd(x@flag, 2L) != 0L,
-       is.alpha = bitwAnd(x@flag, 4L) != 0L,
-       is.nodata = bitwAnd(x@flag, 8L) != 0L)
+  x = checkBand(x)
+  if ( inherits(x, "RGDAL2RasterMask") ) flag = x@flag
+  else flag = GDALGetMaskFlags(x@handle)
+  list(no.mask = bitwAnd(flag, 1L) != 0L,
+       is.shared = bitwAnd(flag, 2L) != 0L,
+       is.alpha = bitwAnd(flag, 4L) != 0L,
+       is.nodata = bitwAnd(flag, 8L) != 0L)
 }
 
 setMethod('show', 'RGDAL2Dataset', function(object)
@@ -365,7 +426,6 @@ getBlockSize = function(x)
 {
     x = checkBand(x)
     res = RGDALGetBlockSize(x@handle)
-    attr(res, 'class') = NULL
     res
 }
 

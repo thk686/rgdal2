@@ -8,3 +8,6 @@ newGDALDataset.Rd
 openGDAL.Rd
 openGDALBand.Rd
 setTransform.Rd
+rgdal2-package.Rd
+getMask.Rd
+getMaskFlags.Rd
