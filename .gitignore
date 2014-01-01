@@ -8,3 +8,4 @@ autom4te.cache
 config.status
 config.log
 .DS_Store
+man

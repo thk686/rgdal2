@@ -12,8 +12,6 @@
 #' 
 #' @return an object of class RGDAL2Dataset
 #' 
-#' @author Timothy H. Keitt
-#' 
 #' @examples
 #' f = system.file("example-data/butterfly.jpg", package = "rgdal2")
 #' x = openGDAL(f)
@@ -36,8 +34,6 @@ openGDAL = function(fname, readonly = TRUE, shared = TRUE)
 #' 
 #' @return an object of class RGDAL2RasterBand
 #' 
-#' @author Timothy H. Keitt
-#'
 #' @examples
 #' f = system.file("example-data/butterfly.jpg", package = "rgdal2")
 #' x = openGDALBand(f)
@@ -76,8 +72,6 @@ openGDALBand = function(fname, band = 1L, readonly = TRUE)
 #' 
 #' @return an object of class RGDAL2Dataset
 #' 
-#' @author Timothy H. Keitt
-#' 
 #' @seealso \code{\link{copyDataset}}
 #' 
 #' @examples
@@ -108,8 +102,6 @@ newGDALDataset = function(nrow, ncol, nbands = 1,
 #' 
 #' @return an object of class RGDAL2Dataset
 #' 
-#' @author Timothy H. Keitt
-#' 
 #' @examples
 #' x = newGDALDataset(10, 10, 3)
 #' y = copyDataset(x)
@@ -136,8 +128,6 @@ copyDataset = function(x, file = tempfile(), driver = "MEM")
 #' \item{transl}{a 2-element vector giving the x and y offsets}
 #' \item{affmat}{a 2x2 scale-rotation matrix}
 #' 
-#' @author Timothy H. Keitt
-#' 
 #' @seealso \code{\link{setTransform}}, \code{\link{copyTransform}}
 #' 
 #' @export
@@ -159,8 +149,6 @@ getTransform = function(object)
 #' @param transform a list a returned by \code{\link{getTransform}}
 #' 
 #' @return the dataset invisibly
-#' 
-#' @author Timothy H. Keitt
 #' 
 #' @seealso \code{\link{getTransform}}, \code{\link{copyTransform}}
 #' 
@@ -188,8 +176,6 @@ setTransform = function(object, transform)
 #' 
 #' @return the target dataset invisibly
 #' 
-#' @author Timothy H. Keitt
-#' 
 #' @seealso \code{\link{getTransform}}, \code{\link{setTransform}}
 #' 
 #' @export
@@ -215,8 +201,6 @@ copyTransform = function(obj1, obj2)
 #' 
 #' @return an object of class RGDAL2RasterBand
 #' 
-#' @author Timothy H. Keitt
-#' 
 #' @seealso \code{\link{newGDALDataset}}
 #' 
 #' @examples
@@ -241,8 +225,6 @@ newGDALBand = function(nrow, ncol, dataType = 'Int32',
 #' Band indices start at 1.
 #' 
 #' @return an object of class RGDAL2RasterBand
-#' 
-#' @author Timothy H. Keitt
 #' 
 #' @seealso \code{\link{newGDALBand}}, \code{\link{nband}}
 #' 
@@ -270,8 +252,6 @@ getBand = function(x, band = 1L)
 #' raster band belongs.
 #' 
 #' @return an object of class RGDAL2Dataset
-#' 
-#' @author Timothy H. Keitt
 #' 
 #' @seealso \code{\link{getBand}}
 #' 
@@ -314,8 +294,6 @@ getColorTable = function(x)
 #' 
 #' @return an object of class RGDAL2RasterMask
 #' 
-#' @author Timothy H. Keitt
-#' 
 #' @seealso \code{\link{getMaskFlags}}
 #' 
 #' @examples
@@ -350,8 +328,6 @@ getMask = function(x)
 #' \item{is.alpha}{true if the mask contains alpha transparency values}
 #' \item{is.nodata}{true if the maks indicates valid data}
 #' 
-#' @author Timothy H. Keitt
-#' 
 #' @seealso \code{\link{getMask}}
 #' 
 #' @examples
@@ -372,6 +348,25 @@ getMaskFlags = function(x)
        is.nodata = bitwAnd(flag, 8L) != 0L)
 }
 
+#' Display information about a dataset
+#' 
+#' @param object a dataset
+#' 
+#' @details
+#' If possible, this function will call and return the output of
+#' the \code{gdalinfo} command. An attempt is made to discover the
+#' number of console lines and truncate the output to fit on the
+#' current console. Otherwise, a simple message is printed along
+#' with the memmory address of the handle.
+#' 
+#' @seealso \code{\link{show}}
+#' 
+#' @examples
+#' f = system.file("example-data/gtopo30_vandg.tif", package = "rgdal2")
+#' x = openGDAL(f)
+#' show(x)
+#'
+#' @export
 setMethod('show', 'RGDAL2Dataset', function(object)
 {
     gdalinfo = Sys.which('gdalinfo')
