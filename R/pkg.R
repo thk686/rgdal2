@@ -2,6 +2,8 @@
 # Copyright Timothy H. Keitt
 #
 
+#' @useDynLib rgdal2
+
 #' @name rgdal2-package
 #' @aliases rgdal2-package, rgdal2
 #' @docType package

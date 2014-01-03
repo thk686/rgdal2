@@ -26,12 +26,26 @@ geometryGrob = function(object, ..., units = "native")
            stop("Conversion to grid object not implemented"))
 }
 
+#' Draw a spatial data object
+#' 
+#' Graphically displays the object using the grid package
+#' 
+#' @param object the object to draw
+#' @param region a geometry setting the drawing region
+#' @param overlay if false, clear the graphics device before plotting
+#' @param recording if false, do not record on the graphics stack
+#' 
+#' @return the grid graphics object invisibly
+#' 
+#' @rdname draw
+#' @export
 setGeneric("draw",
 function(object, ..., region = extent(object), overlay = FALSE, recording = TRUE)
 {
     standardGeneric("draw")
 })
 
+#' @rdname draw
 setMethod("draw", "RGDAL2Geometry",
 function(object, ..., region = extent(object), overlay = FALSE, recording = TRUE)
 {
@@ -45,6 +59,7 @@ function(object, ..., region = extent(object), overlay = FALSE, recording = TRUE
     invisible(object)
 })
 
+#' @rdname draw
 setMethod("draw", "RGDAL2Layer",
 function(object, ..., region = extent(object), overlay = FALSE, recording = TRUE)
 {
@@ -59,6 +74,8 @@ function(object, ..., region = extent(object), overlay = FALSE, recording = TRUE
     invisible(object)
 })
 
+#' @param dpi raster image resolution
+#' @rdname draw
 setMethod("draw", "RGDAL2RasterBand",
 function(object, ..., dpi = 100, region = extent(object), overlay = FALSE, recording = TRUE)
 {
@@ -72,6 +89,7 @@ function(object, ..., dpi = 100, region = extent(object), overlay = FALSE, recor
     invisible(object)
 })
 
+#' @rdname draw
 setMethod("draw", "RGDAL2Dataset",
 function(object, ..., dpi = 100, region = extent(object), overlay = FALSE, recording = TRUE)
 {
@@ -181,6 +199,7 @@ rasterDatasetGrob = function(object,
     rasterGrob(rast, width = width, height = height, default.units = units, ...)
 }
 
+#' @export
 pickExtent = function(object = NULL, plot.it = TRUE)
 {
     p1 = unlist(grid.locator())
@@ -208,9 +227,18 @@ current.viewport.aspect = function()
     unclass(sz[2]) / unclass(sz[1])
 }
 
+#' Create a graticule
+#' 
+#' Returns a geometry object containing a graticule
+#' 
+#' @param dlat the latitude interval in degrees
+#' @param dlon the longitude interval in degrees
+#' @param linc the line-segment increment in degrees
+#' 
+#' @export
 graticule = function(dlat = 10, dlon = 10, linc = 1)
 {
-    latlon = newSRS(EPSG = 4326)
+    latlon = newSRS("EPSG:4326")
     g = newGeometry('wkbMultiLineString', SRS = latlon)
     for ( lon in seq(-180, 180, by = dlon) )
     {

@@ -29,7 +29,7 @@ openGDAL = function(fname, readonly = TRUE, shared = TRUE)
 #' Opens the dataset associated with the specified file and returns a band
 #' 
 #' @param fname the file name
-#' @oaran babd the band number (1-based)
+#' @param band the band number (1-based)
 #' @param readonly if true, prohibit write operations
 #' 
 #' @return an object of class RGDAL2RasterBand
@@ -56,7 +56,7 @@ openGDALBand = function(fname, band = 1L, readonly = TRUE)
 #' @param nosave unlink the file after creation
 #' 
 #' @details
-#' For most purposed, only the "GTiff" and "MEM" drivers are needed. "GTiff"
+#' For most purposes, only the "GTiff" and "MEM" drivers are needed. "GTiff"
 #' creates a geotiff file-based dataset. The "MEM" driver creates the dataset
 #' in memory and the data will not be saved unless the dataset is copied to a
 #' file-based dataset. Similarly, if \code{nosave} is true, then a dataset will
@@ -429,7 +429,7 @@ setMethod('dim', 'RGDAL2Dataset', function(x)
     c(num_rows, num_cols, num_bands)
 })
 
-#' Return dimensions of a dataset
+#' Return dimensions of a band
 #' 
 #' @param x a dataset
 #' 
@@ -496,27 +496,63 @@ getBlockSize = function(x)
     res
 }
 
-setMethod('[', 
-          signature('RGDAL2RasterBand', 'missing', 'missing'),
-          function(x, i, j, ..., drop = TRUE)
-{
-  readRasterBand(x, 1L:nrow(x), 1L:ncol(x), ..., drop = drop)
-})
-
-setMethod('[', 
-          signature('RGDAL2RasterBand', 'numeric', 'missing'),
-          function(x, i, j, ..., drop = TRUE)
-{
-  readRasterBand(x, i, 1L:ncol(x), ..., drop = drop)
-})
-
-setMethod('[', 
-          signature('RGDAL2RasterBand', 'missing', 'numeric'),
-          function(x, i, j, ..., drop = TRUE)
-{
-  readRasterBand(x, 1L:nrow(x), j, ..., drop = drop)
-})
-
+#' Extract data from a raster band
+#' 
+#' Use R-style semantics to read data from a raster band
+#' 
+#' @param x a raster band
+#' @param i the row indices
+#' @param j the column indicies
+#' @param ii subsampling row indices (see details)
+#' @param jj subsampling column indices (see details)
+#' @param drop if true (default), drop singleton dimensions
+#' @param use.mask if true (default), set invalid data to \code{NA}
+#' 
+#' @details
+#' A raster band emulates an R array. Indexing should operate similarly
+#' to native R objects. GDAL internal access functions only allow fetching
+#' of square blocks of data, so \code{x[c(1, 100), c(1, 100)]} will have the
+#' same overhead as \code{x[1:100, 1:100]}. The first however will return a
+#' 2x2 matrix whereas the second will return a 100x100 matrix. If either \code{i}
+#' or \code{j} are missing, they assume the values \code{1:nrow(x)} and
+#' \code{1:ncol(x)} respectively.
+#' 
+#' The subsampling indices \code{ii} and \code{jj} can be used to subsample
+#' the extracted data. The output matrix will have \code{length(ii)} rows and
+#' \code{length(jj)} columns. If the number of elements of \code{ii} (\code{jj})
+#' is smaller than the number of elements in \code{i} (\code{j}) then the
+#' image will be subsampled by skipping pixel values. If the opposite is true,
+#' pixel values will be duplicated to fill out the returned matrix. Note that
+#' whenever the subsampling indices are applied, the minimum value is subtracted
+#' so that \code{ii = 1:3} is equivalent to \code{ii = 100:103}.
+#' 
+#' As a special case, \code{i} may be given as a geometry. The extent of the
+#' geometry will be extracted and used to subset the raster data. The geometry
+#' will be reprojected to match the spatial reference system  of the dataset.
+#' This can be combined with the \code{ii} and \code{jj} parameters.
+#' 
+#' Data are always returned as R type \code{numeric}. The functions
+#' \code{\link{readBlock}} and \code{\link{writeBlock}} are faster and will
+#' return raw bytes, integer or numeric values depending on the type
+#' of data stored in the band. 
+#' 
+#' @seealso \code{\link{readBlock}}
+#' 
+#' @name [,RGDAL2RasterBand
+#' @aliases [,band
+#' @examples
+#' x = newGDALBand(5, 5)
+#' x[]
+#' x[] = 1:25
+#' x[]
+#' x[1:2]
+#' x[c(1, 3), 4:2]
+#' x[ii = 1:3, jj = c(4, 2)]
+#' x[i = 1:2, j = 3:2, ii = 1:5, jj = 1:7]
+#'
+#' @aliases [,RGDAL2RasterBand
+#' @rdname sub-band
+#' @export
 setMethod('[', 
           signature('RGDAL2RasterBand', 'numeric', 'numeric'),
           function(x, i, j, ..., drop = TRUE)
@@ -524,6 +560,35 @@ setMethod('[',
   readRasterBand(x, i, j, ..., drop = drop)
 })
 
+#' @rdname sub-band
+#' @export
+setMethod('[', 
+          signature('RGDAL2RasterBand', 'missing', 'missing'),
+          function(x, i, j, ..., drop = TRUE)
+          {
+            readRasterBand(x, 1L:nrow(x), 1L:ncol(x), ..., drop = drop)
+          })
+
+#' @rdname sub-band
+#' @export
+setMethod('[', 
+          signature('RGDAL2RasterBand', 'numeric', 'missing'),
+          function(x, i, j, ..., drop = TRUE)
+          {
+            readRasterBand(x, i, 1L:ncol(x), ..., drop = drop)
+          })
+
+#' @rdname sub-band
+#' @export
+setMethod('[', 
+          signature('RGDAL2RasterBand', 'missing', 'numeric'),
+          function(x, i, j, ..., drop = TRUE)
+          {
+            readRasterBand(x, 1L:nrow(x), j, ..., drop = drop)
+          })
+
+#' @rdname sub-band
+#' @export
 setMethod('[',
           signature('RGDAL2RasterBand', 'RGDAL2Geometry', 'missing'),
           function(x, i, j, ..., drop = TRUE)
@@ -531,6 +596,14 @@ setMethod('[',
     ij = region2Indices(x, i)
     readRasterBand(x, ij$i, ij$j, ..., drop = drop)
 })
+
+setMethod('[[', 
+          signature('RGDAL2RasterBand', 'numeric', 'numeric'),
+          function(x, i, j, ..., drop = TRUE)
+          {
+            res = RGDAL_CopySubset(x@handle, min(j) - 1, min(i) - 1, length(j), length(i))
+            getBand(newRGDAL2Dataset(res))
+          })
 
 setMethod('[[', 
           signature('RGDAL2RasterBand', 'missing', 'missing'),
@@ -555,14 +628,6 @@ setMethod('[[',
           function(x, i, j, ..., drop = TRUE)
 {
     i = 1L:nrow(x)
-    res = RGDAL_CopySubset(x@handle, min(j) - 1, min(i) - 1, length(j), length(i))
-    getBand(newRGDAL2Dataset(res))
-})
-
-setMethod('[[', 
-          signature('RGDAL2RasterBand', 'numeric', 'numeric'),
-          function(x, i, j, ..., drop = TRUE)
-{
     res = RGDAL_CopySubset(x@handle, min(j) - 1, min(i) - 1, length(j), length(i))
     getBand(newRGDAL2Dataset(res))
 })
@@ -608,35 +673,62 @@ setMethod('[<-',
   writeRasterBand(x, i, j, ..., value = value)
 })
 
-setAs('RGDAL2Dataset', 'array', function(from)
-{
-    dims = dim(from)
-    from[1L:dims[1L], 1L:dims[2L], 1L:dims[3L]]
-})
-
-setAs('RGDAL2Dataset', 'vector', function(from)
-{
-    as(as(from, 'array'), 'vector')
-})
-
-setAs('RGDAL2RasterBand', 'matrix', function(from)
-{
-    from[1L:nrow(from), 1L:ncol(from)]
-})
-
-setAs('RGDAL2RasterBand', 'vector', function(from)
-{
-    as(as(from, 'matrix'), 'vector')
-})
-
+#' Read a natural block of data
+#'
+#' @param i the block row
+#' @param j the block column
+#' 
+#' @details
+#' GDAL raster bands have an internal blocking strcuture. This is usually
+#' a simple scanline, pixel arrangement where each image row is a single
+#' block of data. Other datasets may have internal storage arranged as
+#' tiled blocks of data. Block access is much faster than random IO as
+#' these blocks are cached by the GDAL IO layer. A strategy for efficient
+#' update of large files is to read a block of data, modify it, and then
+#' write the block either into a new dataset or into the original dataset
+#' overwriting the original data.
+#' 
+#' 
+#' 
+#' @seealso writeBlock
+#' 
+#' @examples
+#' f = system.file("example-data/gtopo30_vandg.tif", package = "rgdal2")
+#' x = openGDALBand(f)
+#' a = readBlock(x, 1, 1)
+#' dim(a)
+#' 
+#' @export
 readBlock = function(object, i, j)
 {
     object = checkBand(object)
-    res = RGDAL_ReadBlock(object@handle, i, j)
-    attr(res, "class") = NULL
-    res
+    RGDAL_ReadBlock(object@handle, i, j)
 }
 
+#' Write a natural block of data
+#'
+#' @param object a raster band or dataset
+#' @param i the block row
+#' @param j the block column
+#' 
+#' @details
+#' GDAL raster bands have an internal blocking strcuture. This is usually
+#' a simple scanline, pixel arrangement where each image row is a single
+#' block of data. Other datasets may have internal storage arranged as
+#' tiled blocks of data. Block access is much faster than random IO as
+#' these blocks are cached by the GDAL IO layer. A strategy for efficient
+#' update of large files is to read a block of data, modify it, and then
+#' write the block either into a new dataset or into the original dataset
+#' overwriting the original data.
+#' 
+#' @seealso readBlock
+#' 
+#' @examples
+#' f = system.file("example-data/gtopo30_vandg.tif", package = "rgdal2")
+#' x = openGDALBand(f)
+#' a = readBlock(x, 1, 1)
+#' 
+#' @export
 writeBlock = function(object, i, j, x)
 {
     object = checkBand(object)

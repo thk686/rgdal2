@@ -223,17 +223,160 @@ int GDALGetMaskFlags(SEXP x)
 }
 
 // [[Rcpp::export]]
-std::vector<int> GDALGetBlockSize(SEXP x)
+IntegerVector GDALGetBlockSize(SEXP x)
 {
   GDALDatasetH h = unwrapHandle<GDALDataset>(x);
-  std::vector<int> res(2);
+  IntegerVector res(2);
   GDALGetBlockSize(h, &res[1], &res[0]);
   return res;
 }
 
+// [[Rcpp::export]]
+SEXP readRasterData(SEXP rb,
+                    int x, int y,
+                    int xszin, int yszin,
+                    int xszout, int yszout,
+                    int pixsp = 0, int lnsp = 0)
+{
+  GDALRasterBandH h = unwrapHandle<GDALRasterBand>(rb);
+  NumericVector buf(xszout * yszout);
+  GDALRasterIO(h, GF_Read, x, y, xszin, yszin, &buf[0],
+               xszout, yszout, GDT_Float64, pixsp, lnsp);
+  double scale = GDALGetRasterScale(h, NULL), 
+         offset = GDALGetRasterOffset(h, NULL),
+         nodata = GDALGetRasterNoDataValue(h, NULL);
+  NumericMatrix res(yszout, xszout);
+  for ( int xx = 0; xx != xszout; ++xx )
+    for ( int yy = 0; yy != yszout; ++yy )
+    {
+      double pixv = buf[yy * xszout + xx];
+      res[xx * yszout + yy] =
+        pixv == nodata ? NA_REAL : scale * pixv + offset;
+    }
+  return res;
+}
 
+// [[Rcpp::export]]
+int writeRasterData(SEXP rb,
+                    NumericMatrix raster,
+                    int x, int y,
+                    int xszout, int yszout,
+                    int pixsp = 0, int lnsp = 0)
+{
+  GDALDatasetH h = unwrapHandle<GDALRasterBand>(rb);
+  int xszin = raster.cols(), yszin = raster.rows();
+  double scale = GDALGetRasterScale(h, NULL), 
+         offset = GDALGetRasterOffset(h, NULL),
+         nodata = GDALGetRasterNoDataValue(h, NULL);
+  NumericVector buf(xszin * yszin);
+  for ( int xx = 0; xx != xszin; ++xx )
+    for ( int yy = 0; yy != yszin; ++yy )
+    {
+      double pixv = raster[xx * yszin + yy];
+      buf[yy * xszin + xx] =
+        pixv == NA_REAL ? nodata : (pixv - offset) / scale;
+    }
+  return GDALRasterIO(h, GF_Write, x, y, xszout, yszout, &buf[0],
+                      xszin, yszin, GDT_Float64, pixsp, lnsp);
+}
 
+// [[Rcpp::export]]
+SEXP RGDAL_ReadBlock(SEXP band, int i, int j)
+{
+    GDALRasterBandH hB = unwrapHandle<GDALRasterBand>(band);
+    int xsz, ysz;
+    GDALGetBlockSize(hB, &xsz, &ysz);
+    double scale = GDALGetRasterScale(hB, NULL), 
+           offset = GDALGetRasterOffset(hB, NULL),
+           nodata = GDALGetRasterNoDataValue(hB, NULL);
+    GDALDataType dt = GDALGetRasterDataType(hB);
+    switch ( dt )
+    {
+        case GDT_Int32:
+          {
+            IntegerVector buf(xsz * ysz, NA_INTEGER);
+            GDALReadBlock(hB, j - 1, i - 1, &buf[0]);
+            IntegerMatrix res(ysz, xsz);
+            for ( int x = 0; x != xsz; ++x )
+              for ( int y = 0; y != ysz; ++y )
+              {
+                double pixv = buf[y * xsz + x];
+                res[x * ysz + y] =
+                  pixv == nodata ? NA_INTEGER : scale * pixv + offset;
+              }
+            return res;
+          }
+        case GDT_Float64:
+          {
+            NumericVector buf(xsz * ysz, NA_REAL);
+            GDALReadBlock(hB, j - 1, i - 1, &buf[0]);
+            NumericMatrix res(ysz, xsz);
+            for ( int x = 0; x != xsz; ++x )
+              for ( int y = 0; y != ysz; ++y )
+              {
+                double pixv = buf[y * xsz + x];
+                res[x * ysz + y] =
+                  pixv == nodata ? NA_REAL : scale * pixv + offset;
+              }
+            return res;
+          }
+        case GDT_Byte:
+          {
+            RawVector buf(xsz * ysz);
+            GDALReadBlock(hB, j - 1, i - 1, &buf[0]);
+            RawMatrix res(ysz, xsz);
+            for ( int x = 0; x != xsz; ++x )
+              for ( int y = 0; y != ysz; ++y )
+              {
+                double pixv = buf[y * xsz + x];
+                res[x * ysz + y] = scale * pixv + offset;
+              }
+            return res;
+          }
+        case GDT_Int16:
+          {
+            std::vector<int16_t> buf(xsz * ysz);
+            GDALReadBlock(hB, j - 1, i - 1, &buf[0]);
+            IntegerMatrix res(ysz, xsz);
+            for ( int x = 0; x != xsz; ++x )
+              for ( int y = 0; y != ysz; ++y )
+              {
+                double pixv = buf[y * xsz + x];
+                res[x * ysz + y] =
+                  pixv == nodata ? NA_INTEGER : scale * pixv + offset;
+              }
+            return res;
+          }
+        default:
+            stop("Unsupported data type in block read\n");
+    }
+}
 
+/*
+int RGDAL_WriteBlock(SEXP band, int i, int j, SEXP blk)
+{
+    GDALRasterBandH hB = unwrapHandle<GDALRasterBand>(band);
+    int xsz, ysz;
+    GDALGetBlockSize(hB, &xsz, &ysz);
+    if ( length(blk) < xsz * ysz )
+        error("Input does not match block size\n");
+    GDALDataType dt = GDALGetRasterDataType(hB);
+    switch ( dt )
+    {
+        case GDT_Int32:;
+            return GDALWriteBlock(hB, j - 1, i - 1, INTEGER(blk));
+        case GDT_Float64:;
+            return GDALWriteBlock(hB, j - 1, i - 1, REAL(blk));
+        case GDT_Byte:;
+            return GDALWriteBlock(hB, j - 1, i - 1, RAW(blk));
+        case GDT_Int16:;
+            int16_t* buf = (int16_t*) R_alloc(xsz * ysz, 2);
+            for ( size_t k = 0; k != xsz * ysz; ++k )
+                buf[k] = INTEGER(blk)[k];
+            return GDALWriteBlock(hB, j - 1, i - 1, &(buf[0]));
+        default:;
+            error("Unsupported data type in block read\n");
+    }
+}
 
-
-
+*/
