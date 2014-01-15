@@ -8,6 +8,7 @@
 setClass('RGDAL2Dataset', slots = c(handle = 'externalptr'))
 setClass('RGDAL2RasterBand', slots = c(handle = 'externalptr', dataset = 'RGDAL2Dataset'))
 setClass('RGDAL2RasterMask', contains = 'RGDAL2RasterBand', slots = c(flag = 'integer'))
+setClass('RGDAL2BlockMatrix', slots = c(band = 'RGDAL2RasterBand'))
 
 #
 # OGR classes
@@ -60,3 +61,8 @@ function(object, SRS, ...)
 {
     standardGeneric("reproject")
 })
+
+#
+# Misc
+#
+setGeneric("length")

@@ -13,9 +13,25 @@ getConsoleLines = function(default = 40)
     return(lines)
 }
 
+getConsoleCols = function(default = 80)
+{
+  term = Sys.getenv("TERM")
+  tput = Sys.which('tput')
+  if ( nchar(tput) > 0 && nchar(term) > 0 )
+  {
+    res = system(paste(tput, "cols"), intern = TRUE)
+    if ( attr(res, "status") ) lines = default
+    else lines = as.integer(res)
+  }
+  else
+    lines = default
+  return(lines)
+}
+
 catLines = function(x)
 {
     max.lines = getConsoleLines()
+    max.chars = getConsoleCols()
     for ( i in 1L:length(x) ) 
     {
         if ( i > max.lines - 4 )
@@ -23,7 +39,13 @@ catLines = function(x)
             cat("Truncated...\n")
             break;
         }
-        cat(x[i], '\n')
+        out = x[i]
+        if ( nchar(out) > max.chars - 4 )
+        {
+          out = substr(out, 0, max.chars - 8)
+          out = paste(out, "...")
+        }
+        cat(out, '\n')
     }
 }
 

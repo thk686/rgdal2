@@ -28,7 +28,7 @@ geometryGrob = function(object, ..., units = "native")
 
 #' Draw a spatial data object
 #' 
-#' Graphically displays the object using the grid package
+#' Graphically displays the object using the \code{\link{grid}} package
 #' 
 #' @param object the object to draw
 #' @param region a geometry setting the drawing region
@@ -37,6 +37,11 @@ geometryGrob = function(object, ..., units = "native")
 #' 
 #' @return the grid graphics object invisibly
 #' 
+#' @examples
+#' f = system.file("example-data/butterfly.jpg", package = "rgdal2")
+#' x = openGDAL(f)
+#' draw(x)
+#'   
 #' @rdname draw
 #' @export
 setGeneric("draw",

@@ -7,13 +7,19 @@
 #' Opens the datasource associated with the specified file
 #' 
 #' @param fname the file name
-#' @param readonly if true, prohibit write operations
+#' @param readonly if true, disable write operations
 #' 
 #' @details
 #' A data source can be treated as a named list of layers.
 #' 
 #' @return an object of class RGDAL2Datasource
 #' 
+#' @examples
+#' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
+#' x = openOGR(f)
+#' show(x)
+#' 
+#' @family ogr-io
 #' @export
 openOGR = function(fname, readonly = TRUE)
 {
@@ -34,6 +40,7 @@ openOGR = function(fname, readonly = TRUE)
 #' 
 #' @return an object of class RGDAL2Datasource
 #' 
+#' @family ogr-io
 #' @export
 newOGRDatasource = function(driver = "MEM", fname = tempfile())
 {
@@ -41,8 +48,8 @@ newOGRDatasource = function(driver = "MEM", fname = tempfile())
     newRGDAL2Datasource(x)
 }
 
-#' @export
-setMethod('show', 'RGDAL2Datasource', function(object)
+setMethod('show', 'RGDAL2Datasource',
+function(object)
 {
     ogrinfo = Sys.which('ogrinfo')
     dsname = OGR_DS_GetName(object@handle)
@@ -62,12 +69,22 @@ setMethod('show', 'RGDAL2Datasource', function(object)
     }
 })
 
+#' Methods for data sources
+#' 
+#' List-like access to layers in a data source
+#' 
+#' @param x the data source
+#' 
+#' @aliases vector-data-source
+#' @rdname data-source-methods
 #' @export
-setMethod('length', "RGDAL2Datasource", function(x)
+setMethod('length', "RGDAL2Datasource",
+function(x)
 {
     OGR_DS_GetLayerCount(x@handle)
 })
 
+#' @rdname data-source-methods
 #' @export
 setMethod("names", "RGDAL2Datasource", function(x)
 {
@@ -77,8 +94,11 @@ setMethod("names", "RGDAL2Datasource", function(x)
     res
 })
 
+#' @param i the layer number
+#' @rdname data-source-methods
 #' @export
-setMethod("[", "RGDAL2Datasource", function(x, i, j, ...)
+setMethod("[","RGDAL2Datasource",
+function(x, i)
 {
     res = NULL
     for ( ii in i )
@@ -86,32 +106,49 @@ setMethod("[", "RGDAL2Datasource", function(x, i, j, ...)
     res
 })
 
+#' @rdname data-source-methods
 #' @export
-setMethod("[[", "RGDAL2Datasource", function(x, i, j, ...)
+setMethod("[[", "RGDAL2Datasource",
+function(x, i)
 {
     getLayer(x, i)    
 })
 
+#' @param name the name of the layer
+#' @rdname data-source-methods
 #' @export
-setMethod("$", "RGDAL2Datasource", function(x, name)
+setMethod("$", "RGDAL2Datasource",
+function(x, name)
 {
     getLayer(x, name)
 })
 
 #' @export
-setMethod("properties", "RGDAL2Datasource", function(object)
+setMethod("properties", "RGDAL2Datasource",
+function(object)
 {
     list(create.layer = testCapability(object, "create.layer"),
          delete.layer = testCapability(object, "create.layer"),
          create.geom.field = testCapability(object, "create.geom.field"))
 })
 
-#
-# Functions for data layers
-#
-openOGRLayer = function(fname, layer = 1L, mutable = FALSE)
+#' Open an OGR layer
+#' 
+#' Opens an OGR data source and returns a layer
+#' 
+#' @param layer the layer number
+#' @param readonly if true, dissable writes
+#' 
+#' @examples
+#' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
+#' x = openOGRLayer(f)
+#' show(x)
+#' 
+#' @family ogr-io
+#' @export
+openOGRLayer = function(fname, layer = 1L, readonly = TRUE)
 {
-    getLayer(openOGR(fname, mutable), layer)
+    getLayer(openOGR(fname, readonly), layer)
 }
 
 getLayerName = function(x)
@@ -120,7 +157,8 @@ getLayerName = function(x)
     OGR_L_GetName(x@handle)
 }
 
-setMethod('show', 'RGDAL2Layer', function(object)
+setMethod('show', 'RGDAL2Layer',
+function(object)
 {
     ogrinfo = Sys.which('ogrinfo')
     dsname = OGR_DS_GetName(object@datasource@handle)
@@ -140,12 +178,28 @@ setMethod('show', 'RGDAL2Layer', function(object)
     }
 })
 
-setMethod('length', 'RGDAL2Layer', function(x)
+setMethod('dim', 'RGDAL2Layer',
+function(x)
 {
-    OGR_L_GetFeatureCount(x@handle, 1L)
+  rows = RGDAL_OGR_L_GetFeatureCount(x@handle)
+  cols = GetLayerFieldCount(x@handle)
+  c(rows, cols)
 })
 
-setMethod("properties", "RGDAL2Layer", function(object)
+setMethod('length', 'RGDAL2Layer',
+function(x)
+{
+  GetLayerFieldCount(x@handle)
+})
+
+setMethod('names', 'RGDAL2Layer',
+function(x)
+{
+  GetFieldNames(x@handle)
+})
+
+setMethod("properties", "RGDAL2Layer",
+function(object)
 {
     list(random.read = testCapability(object, "random.read"),
          sequential.write = testCapability(object, "sequential.write"),
@@ -163,6 +217,27 @@ setMethod("properties", "RGDAL2Layer", function(object)
          transactions = testCapability(object, "transactions"))
 })
 
+#' Query data source and return a layer
+#' 
+#' Execute SQL query and return results as a layer
+#' 
+#' @param x a data source
+#' @param sql an SQL query string
+#' 
+#' @details
+#' \code{getSQLLayer} executes the SQL query and returns the results as a layer,
+#' whereas \code{execSQL}, as a convenience, simply executes the SQL and discards
+#' the result. Note that a layer could be simply a table of values without any
+#' associated geometries.
+#' 
+#' @examples
+#' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
+#' x = openOGR(f)
+#' y = getSQLLayer(x, "select * from tl_2013_us_state where \'NAME\' = \"Texas\"")
+#' show(y)
+#' 
+#' @rdname sql-layer
+#' @export
 getSQLLayer = function(x, sql)
 {
     assertClass(x, "RGDAL2Datasource")
@@ -170,6 +245,8 @@ getSQLLayer = function(x, sql)
     newRGDAL2SQLLayer(lyr, x, sql)
 }
 
+#' @rdname sql-layer
+#' @export
 execSQL = function(x, sql)
 {
     assertClass(x, "RGDAL2Datasource")
@@ -178,7 +255,8 @@ execSQL = function(x, sql)
     invisible()
 }
 
-setMethod('show', 'RGDAL2SQLLayer', function(object)
+setMethod('show', 'RGDAL2SQLLayer',
+function(object)
 {
     ogrinfo = Sys.which('ogrinfo')
     dsname = OGR_DS_GetName(object@datasource@handle)
@@ -197,10 +275,22 @@ setMethod('show', 'RGDAL2SQLLayer', function(object)
     }
 })
 
+#' Rewind OGR layer
+#' 
+#' Reset the geometry cursor to the beginning
+#' 
+#' @param x an OGR layer
+#' 
+#' @details
+#' The function \code{\link{getNextGeometry}} will increment forward until
+#' no geometries remain. To start with the first geometry, this function must
+#' be called if the cursor is not already at the begining.
+#' 
+#' @export
 rewind = function(x)
 {
     assertClass(x, "RGDAL2Layer")
-    OGR_L_ResetReading(x@handle)
+    RGDAL_OGR_L_ResetReading(x@handle)
     invisible(x)
 }
 
@@ -218,6 +308,26 @@ getNextFeature = function(x)
     newRGDAL2Feature(feat, x)
 }
 
+#' Fetch the next geometry
+#' 
+#' Returns the next geometry in a layer
+#' 
+#' @param x an OGR layer
+#' 
+#' @details
+#' Each layer holds an internal cursor. This function fetches the next
+#' geometry in a sequence and increments the cursor. It can be called
+#' repeatedly to get all the geometries in a layer.
+#' 
+#' @seealso \code{\link{rewind}}
+#' 
+#' @examples
+#' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
+#' x = openOGRLayer(f)
+#' g = getNextGeometry(x)
+#' show(g)
+#' 
+#' @export
 getNextGeometry = function(x)
 {
     feat = getNextFeature(x)
@@ -322,6 +432,26 @@ print.RGDAL2LayerDF = function(x, ...)
     invisible(x)
 }
 
+#' Get the spatial extent of an object
+#' 
+#' Compute the spatial extent of an object and return it as a geometry
+#' 
+#' @param object a spatial object
+#' 
+#' @details
+#' If the object has a spatial filter set, then the extent of the spatial
+#' filter is returned. Otherwise, the extent of the object is returned.
+#' 
+#' @value a geometry object
+#' 
+#' @examples
+#' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
+#' x = openOGRLayer(f)
+#' extent(x)
+#' 
+#' @aliases extent
+#' @rdname extent
+#' @export
 setMethod("extent", "RGDAL2Layer", function(object)
 {
     sf = getSpatialFilter(object)
@@ -350,7 +480,7 @@ setSpatialFilter = function(layer, geom)
 getSpatialFilter = function(layer)
 {
     assertClass(layer, "RGDAL2Layer")
-    res = OGR_L_GetSpatialFilter(layer@handle)
+    res = RGDAL_OGR_L_GetSpatialFilter(layer@handle)
     newRGDAL2Geometry(res)
 }
 
@@ -408,18 +538,15 @@ newGeometry = function(geomType, points = NULL, SRS = NULL)
     res
 }
 
-setMethod("show", "RGDAL2Geometry", function(object)
+setMethod("show", "RGDAL2Geometry",
+function(object)
 {
-    len = length(object)
-    if ( len < 100L )
-        RGDAL_PrintGeometry(object@handle)
-    else
-    {
-        geomType = OGR_G_GetGeometryName(object@handle)
-        cat("OGR Geometry (", geomType, ") with ", len,
-            " points at address ", sep = "")
-        print(object@handle)
-    }
+  file = tempfile()
+  on.exit(unlink(file))
+  RGDAL_DumpGeometry(object@handle, file)
+  res = readLines(file)
+  catLines(res)
+  return(invisible(res))
 })
 
 #Fixme: this should return count of geometries
@@ -434,7 +561,6 @@ getPoints = function(x, collapse = FALSE)
 {
     assertClass(x, "RGDAL2Geometry")
     res = RGDAL_GetPoints(x@handle)
-    attr(res, "class") = NULL
     if ( collapse )
         collapsePointList(res)
     else res
@@ -477,6 +603,8 @@ function(x, i)
     res
 })
 
+#' @rdname extent
+#' @export
 setMethod("extent", "RGDAL2Geometry", function(object)
 {
     res = RGDAL_GetGeomEnv(object@handle)
@@ -638,7 +766,8 @@ area = function(x)
 #
 # Misc functions
 #
-setMethod("extent", "list", function(object)
+setMethod("extent", "list",
+function(object)
 {
     if ( isPointList(object) )
     {

@@ -3,6 +3,7 @@
 #include <gdal_alg.h>
 #include <ogr_api.h>
 #include <ogr_srs_api.h>
+#include <cpl_conv.h>
 #include <Rcpp.h>
 
 using namespace Rcpp;
@@ -10,11 +11,15 @@ using namespace Rcpp;
 //
 // I am trying to stick to the GDAL public interface,
 // so these need to be defined solely to have a type
-// for the XPtr template. I suppose I could also have
-// typedef'd them as void.
+// for the XPtr template, and for readability.
 //
 class GDALDataset;
 class GDALRasterBand;
+class OGRDataSource;
+class OGRLayer;
+class OGRGeometry;
+class OGRSpatialReference;
+class OGRFeature;
 
 //
 // Kludge until I come up with something better
@@ -26,6 +31,11 @@ class GDALRasterBand;
 #if SIZEOF_DOUBLE * CHAR_BIT != 64
 #error "Double type must be 64bit"
 #endif
+
+//
+// Stop on error (error handler will print message)
+//
+#define _(a) if ((a) != 0) stop("")
 
 //
 // Returns errors to R
@@ -40,17 +50,17 @@ static void __err_handler(CPLErr eErrClass, int err_no, const char *msg)
             break;
         case 1:
         case 2:
-            ::Rf_warning("GDAL Message %d: %s\n", err_no, msg);
+            Rf_warning("GDAL Message %d: %s\n", err_no, msg);
             break;
         case 3:
-            ::Rf_warning("GDAL Error %d: %s\n", err_no, msg);
+            Rf_warning("GDAL Error %d: %s\n", err_no, msg);
             break;
         case 4:
-            ::Rf_warning("GDAL Error %d: %s\n", err_no, msg);
+            Rf_warning("GDAL Error %d: %s\n", err_no, msg);
             stop("Unrecoverable error\n");
             break;        
         default:
-            ::Rf_warning("Received invalid error class %d (errno %d: %s)\n", eErrClass, err_no, msg);
+            Rf_warning("Received invalid error class %d (errno %d: %s)\n", eErrClass, err_no, msg);
             break;
     }
     return;
@@ -100,7 +110,7 @@ void GDALClose(SEXP x)
 // [[Rcpp::export]]
 bool isNullPtr(SEXP x)
 {
-  ::Rf_warning("Checked for null pointer\n");
+  Rf_warning("Checked for null pointer\n"); // trying to deprecate this
   return EXTPTR_PTR(x) == NULL;
 }
 
@@ -194,7 +204,7 @@ SEXP RGDAL_GetGeoTransform(SEXP x)
 {
     NumericVector res(6);
     GDALDatasetH h = unwrapHandle<GDALDataset>(x);
-    GDALGetGeoTransform(h, &res[0]);
+    _(GDALGetGeoTransform(h, &res[0]));
     return res;
 }
 
@@ -240,8 +250,8 @@ SEXP readRasterData(SEXP rb,
 {
   GDALRasterBandH h = unwrapHandle<GDALRasterBand>(rb);
   NumericVector buf(xszout * yszout);
-  GDALRasterIO(h, GF_Read, x, y, xszin, yszin, &buf[0],
-               xszout, yszout, GDT_Float64, pixsp, lnsp);
+  _(GDALRasterIO(h, GF_Read, x, y, xszin, yszin, &buf[0],
+                xszout, yszout, GDT_Float64, pixsp, lnsp));
   double scale = GDALGetRasterScale(h, NULL), 
          offset = GDALGetRasterOffset(h, NULL),
          nodata = GDALGetRasterNoDataValue(h, NULL);
@@ -352,31 +362,510 @@ SEXP RGDAL_ReadBlock(SEXP band, int i, int j)
     }
 }
 
-/*
+// [[Rcpp::export]]
 int RGDAL_WriteBlock(SEXP band, int i, int j, SEXP blk)
 {
     GDALRasterBandH hB = unwrapHandle<GDALRasterBand>(band);
     int xsz, ysz;
     GDALGetBlockSize(hB, &xsz, &ysz);
-    if ( length(blk) < xsz * ysz )
-        error("Input does not match block size\n");
+    if ( Rf_length(blk) < xsz * ysz )
+        stop("Input does not match block size\n");
     GDALDataType dt = GDALGetRasterDataType(hB);
     switch ( dt )
     {
-        case GDT_Int32:;
+        case GDT_Int32:
             return GDALWriteBlock(hB, j - 1, i - 1, INTEGER(blk));
-        case GDT_Float64:;
+        case GDT_Float64:
             return GDALWriteBlock(hB, j - 1, i - 1, REAL(blk));
-        case GDT_Byte:;
+        case GDT_Byte:
             return GDALWriteBlock(hB, j - 1, i - 1, RAW(blk));
-        case GDT_Int16:;
+        case GDT_Int16:
+          {
             int16_t* buf = (int16_t*) R_alloc(xsz * ysz, 2);
             for ( size_t k = 0; k != xsz * ysz; ++k )
                 buf[k] = INTEGER(blk)[k];
             return GDALWriteBlock(hB, j - 1, i - 1, &(buf[0]));
-        default:;
-            error("Unsupported data type in block read\n");
+          }
+        default:
+            stop("Unsupported data type in block read\n");
     }
 }
 
-*/
+// [[Rcpp::export]]
+SEXP RGDAL_OGROpen(const char* file, int readonly)
+{
+  OGRDataSourceH res = OGROpen(file, !readonly, NULL);
+  if ( !res ) stop("Cannot open file\n");
+  return wrapHandle<OGRDataSource>(res);
+}
+
+// [[Rcpp::export]]
+void OGRReleaseDataSource(SEXP ds)
+{
+  OGRDataSourceH h = unwrapHandle<OGRDataSource>(ds);
+  OGRReleaseDataSource(h);
+}
+
+// [[Rcpp::export]]
+int OGR_DS_GetLayerCount(SEXP ds)
+{
+  OGRDataSourceH h = unwrapHandle<OGRDataSource>(ds);
+  return OGR_DS_GetLayerCount(h);
+}
+
+// [[Rcpp::export]]
+const char* OGR_DS_GetName(SEXP ds)
+{
+  OGRDataSourceH h = unwrapHandle<OGRDataSource>(ds);
+  return OGR_DS_GetName(h);
+}
+
+// [[Rcpp::export]]
+const char* RGDAL_GetDSDriverName(SEXP ds)
+{
+    OGRDataSourceH h = unwrapHandle<OGRDataSource>(ds);
+    OGRSFDriverH hDr = OGR_DS_GetDriver(h);
+    return OGR_Dr_GetName(hDr);
+}
+
+// [[Rcpp::export]]
+SEXP OGR_DS_GetLayer(SEXP ds, int i)
+{
+  OGRDataSourceH h = unwrapHandle<OGRDataSource>(ds);
+  OGRLayerH res = OGR_DS_GetLayer(h, i);
+  return wrapHandle<OGRLayer>(res);
+}
+
+// [[Rcpp::export]]
+SEXP RGDAL_GetRasterExtent(SEXP ds)
+{
+    GDALDatasetH hDS = unwrapHandle<GDALDataset>(ds);
+  
+    double transf[6],
+           geox, geoy,
+           xmin = 0, ymin = 0,
+           xmax = GDALGetRasterXSize(hDS),
+           ymax = GDALGetRasterYSize(hDS);
+
+    OGRGeometryH hGeom = OGR_G_CreateGeometry(wkbPolygon),
+                 hRing = OGR_G_CreateGeometry(wkbLinearRing);
+    
+    _(GDALGetGeoTransform(hDS, &(transf[0])));
+    GDALApplyGeoTransform(&(transf[0]), xmin, ymin, &geox, &geoy);
+    OGR_G_AddPoint_2D(hRing, geox, geoy);
+    GDALApplyGeoTransform(&(transf[0]), xmin, ymax, &geox, &geoy);
+    OGR_G_AddPoint_2D(hRing, geox, geoy);
+    GDALApplyGeoTransform(&(transf[0]), xmax, ymax, &geox, &geoy);
+    OGR_G_AddPoint_2D(hRing, geox, geoy);
+    GDALApplyGeoTransform(&(transf[0]), xmax, ymin, &geox, &geoy);
+    OGR_G_AddPoint_2D(hRing, geox, geoy);
+    GDALApplyGeoTransform(&(transf[0]), xmin, ymin, &geox, &geoy);
+    OGR_G_AddPoint_2D(hRing, geox, geoy);
+    OGR_G_AddGeometry(hGeom, hRing);
+    return wrapHandle<OGRGeometry>(hGeom);
+}
+
+// [[Rcpp::export]]
+const char* OGR_L_GetName(SEXP lyr)
+{
+  OGRLayerH h = unwrapHandle<OGRLayer>(lyr);
+  return OGR_L_GetName(h);
+}
+
+// [[Rcpp::export]]
+SEXP OGR_DS_GetLayerByName(SEXP ds, const char* lnam)
+{
+  OGRDataSourceH h = unwrapHandle<OGRDataSource>(ds);
+  OGRLayerH res = OGR_DS_GetLayerByName(h, lnam);
+  return wrapHandle<OGRLayer>(res);
+}
+
+static OGRGeometryH extentToGeom(OGREnvelope env)
+{
+    OGRGeometryH res = OGR_G_CreateGeometry(wkbPolygon),
+                 ring = OGR_G_CreateGeometry(wkbLinearRing);
+    OGR_G_AddPoint_2D(ring, env.MinX, env.MinY);
+    OGR_G_AddPoint_2D(ring, env.MinX, env.MaxY);
+    OGR_G_AddPoint_2D(ring, env.MaxX, env.MaxY);
+    OGR_G_AddPoint_2D(ring, env.MaxX, env.MinY);
+    OGR_G_AddPoint_2D(ring, env.MinX, env.MinY);
+    OGR_G_AddGeometry(res, ring); // copy?
+    return res; // leak?
+}
+
+// [[Rcpp::export]]
+SEXP RGDAL_GetLayerEnv(SEXP layer)
+{
+    OGRLayerH hL = unwrapHandle<OGRLayer>(layer);
+    OGREnvelope env;
+    OGR_L_GetExtent(hL, &env, 1);
+    OGRGeometryH res = extentToGeom(env);
+    return wrapHandle<OGRGeometry>(res);
+}
+
+// [[Rcpp::export]]
+const char* GDALGetProjectionRef(SEXP ds)
+{
+  GDALDatasetH h = unwrapHandle<GDALDataset>(ds);
+  GDALGetProjectionRef(h);
+}
+
+// [[Rcpp::export]]
+SEXP RGDAL_OSRNewSpatialReference(const char* srss)
+{
+  OGRSpatialReferenceH h = OSRNewSpatialReference(srss);
+  return wrapHandle<OGRSpatialReference>(h);
+}
+
+// [[Rcpp::export]]
+int OSRSetFromUserInput(SEXP srs, const char* def)
+{
+  OGRSpatialReferenceH h = unwrapHandle<OGRSpatialReference>(srs);
+  return OSRSetFromUserInput(h, def);
+}
+
+// [[Rcpp::export]]
+void RGDAL_OSRRelease(SEXP srs)
+{
+  OGRSpatialReferenceH h = unwrapHandle<OGRSpatialReference>(srs);
+  OSRRelease(h);
+}
+
+// [[Rcpp::export]]
+SEXP RGDAL_GetWKT(SEXP srs)
+{
+    OGRSpatialReferenceH hSR = unwrapHandle<OGRSpatialReference>(srs);
+    char* wktstring;
+    _(OSRExportToPrettyWkt(hSR, &wktstring, 0));
+    SEXP res = Rf_ScalarString(Rf_mkChar(wktstring));
+    CPLFree(wktstring);
+    return res;
+}
+
+// [[Rcpp::export]]
+SEXP RGDAL_GetPROJ4(SEXP srs)
+{
+    OGRSpatialReferenceH hSRS = unwrapHandle<OGRSpatialReference>(srs);
+    if ( ! hSRS )
+        return(Rf_ScalarString(Rf_mkChar("Null SRS")));
+    char* proj4string;
+    _(OSRExportToProj4(hSRS, &proj4string));
+    SEXP res = Rf_ScalarString(Rf_mkChar(proj4string));
+    CPLFree(proj4string);
+    return res;
+}
+
+// [[Rcpp::export]]
+int GDALSetProjection(SEXP ds, const char* proj)
+{
+  GDALDatasetH h = unwrapHandle<GDALDataset>(ds);
+  return GDALSetProjection(h, proj);
+}
+
+// [[Rcpp::export]]
+int RGDAL_OGR_L_GetFeatureCount(SEXP lyr)
+{
+  OGRLayerH h = unwrapHandle<OGRLayer>(lyr);
+  return OGR_L_GetFeatureCount(h, 1);
+}
+
+// [[Rcpp::export]]
+SEXP RGDAL_OGR_L_GetSpatialFilter(SEXP lyr)
+{
+  OGRLayerH h = unwrapHandle<OGRLayer>(lyr);
+  OGRGeometryH res = OGR_L_GetSpatialFilter(h);
+  return res ?
+    wrapHandle<OGRGeometry>(res) : 
+    R_NilValue;
+}
+
+// [[Rcpp::export]]
+void RGDAL_OGR_L_ResetReading(SEXP lyr)
+{
+  OGRLayerH h = unwrapHandle<OGRLayer>(lyr);
+  OGR_L_ResetReading(h);
+}
+
+// [[Rcpp::export]]
+SEXP OGR_L_GetSpatialRef(SEXP lyr)
+{
+  OGRLayerH h = unwrapHandle<OGRLayer>(lyr);
+  OGRSpatialReferenceH res = OGR_L_GetSpatialRef(h);
+  return wrapHandle<OGRSpatialReference>(res);
+}
+
+// [[Rcpp::export]]
+void RGDAL_OGR_G_DestroyGeometry(SEXP geom)
+{
+  OGRGeometryH h = unwrapHandle<OGRGeometry>(geom);
+  OGR_G_DestroyGeometry(h);
+}
+
+// [[Rcpp::export]]
+SEXP OGR_G_GetSpatialReference(SEXP geom)
+{
+  OGRGeometryH h = unwrapHandle<OGRGeometry>(geom);
+  OGRSpatialReferenceH res = OGR_G_GetSpatialReference(h);
+  return wrapHandle<OGRSpatialReference>(res);
+}
+
+// [[Rcpp::export]]
+SEXP OSRClone(SEXP sref)
+{
+  OGRSpatialReferenceH h = unwrapHandle<OGRSpatialReference>(sref);
+  OGRSpatialReferenceH res = OSRClone(h);
+  return wrapHandle<OGRSpatialReference>(res);
+}
+
+// [[Rcpp::export]]
+void OGR_G_AssignSpatialReference(SEXP geom, SEXP srs)
+{
+  OGRGeometryH h1 = unwrapHandle<OGRGeometry>(geom);
+  OGRSpatialReferenceH h2 = unwrapHandle<OGRSpatialReference>(srs);
+  OGR_G_AssignSpatialReference(h1, h2);
+}
+
+// [[Rcpp::export]]
+int OGR_G_GetCoordinateDimension(SEXP geom)
+{
+  OGRGeometryH h = unwrapHandle<OGRGeometry>(geom);
+  return OGR_G_GetCoordinateDimension(h);
+}
+
+// These are carried over from my first cut with SWIG
+// They have not been coverted to Rcpp
+static void attachPoints(SEXP res, OGRGeometryH hG)
+{
+    SEXP x, y, z;
+    int stride = sizeof(double),
+        n = OGR_G_GetPointCount(hG);
+    if ( n == 0 ) return;
+    x = PROTECT(Rf_allocVector(REALSXP, n));
+    y = PROTECT(Rf_allocVector(REALSXP, n));
+    z = PROTECT(Rf_allocVector(REALSXP, n));
+    OGR_G_GetPoints(hG, REAL(x), stride, REAL(y), stride, REAL(z), stride);
+    switch ( Rf_length(res) )
+    {
+      case 3:;
+        SET_VECTOR_ELT(res, 0, x);  
+        SET_VECTOR_ELT(res, 1, y);
+        SET_VECTOR_ELT(res, 2, z);
+        break;
+      case 2:;
+        SET_VECTOR_ELT(res, 0, x);  
+        SET_VECTOR_ELT(res, 1, y);
+        break;
+      default:;
+        Rf_warning("Empty geometry\n");
+        break;
+    }
+    UNPROTECT(3);
+    return;
+}
+
+static void attachNames(SEXP x)
+{
+    int dim = Rf_length(x);
+    SEXP names = PROTECT(Rf_allocVector(STRSXP, dim));
+    switch ( dim )
+    {
+      case 3:;
+        SET_STRING_ELT(names, 2, Rf_mkChar("z"));
+      case 2:;
+        SET_STRING_ELT(names, 1, Rf_mkChar("y"));
+        SET_STRING_ELT(names, 0, Rf_mkChar("x"));
+        break;
+      default:;
+        Rf_warning("Empty geometry\n");      
+        break;
+    }
+    Rf_setAttrib(x, R_NamesSymbol, names);
+    UNPROTECT(1);
+    return;
+}
+
+static SEXP GetPointsInternal(OGRGeometryH hG)
+{
+    SEXP res;
+    int n = OGR_G_GetGeometryCount(hG);
+    switch ( n )
+    {
+      case 0:
+        {
+          int dim = OGR_G_GetCoordinateDimension(hG);   
+          res = PROTECT(Rf_allocVector(VECSXP, dim));
+          attachPoints(res, hG);
+          attachNames(res);
+          UNPROTECT(1);
+        }
+        break;
+      case 1:
+        {
+          OGRGeometryH hR = OGR_G_GetGeometryRef(hG, 0);
+          res = GetPointsInternal(hR);
+        }
+        break;
+      default:
+        {
+          res = PROTECT(Rf_allocVector(VECSXP, n));
+          for ( size_t i = 0; i != n; ++i )
+          {
+              OGRGeometryH hR = OGR_G_GetGeometryRef(hG, i);
+              SET_VECTOR_ELT(res, i, GetPointsInternal(hR));
+          }
+          UNPROTECT(1);
+        }
+        break;
+    }
+    return res;
+}
+
+// [[Rcpp::export]]
+SEXP RGDAL_GetPoints(SEXP geom)
+{
+  OGRGeometryH h = unwrapHandle<OGRGeometry>(geom);
+  return GetPointsInternal(h);
+}
+
+// [[Rcpp::export]]
+void RGDAL_DumpGeometry(SEXP geom, const char* fname)
+{
+    OGRGeometryH hG = unwrapHandle<OGRGeometry>(geom);
+    FILE* f = std::fopen(fname, "w");
+    OGR_G_DumpReadable(hG, f, "");
+    std::fclose(f);
+}
+
+// [[Rcpp::export]]
+SEXP RGDAL_ExecSQL(SEXP ds, const char* sql)
+{
+  OGRDataSourceH hDS = unwrapHandle<OGRDataSource>(ds);
+  OGRLayerH res = OGR_DS_ExecuteSQL(hDS, sql, NULL, NULL);
+  return res ? wrapHandle<OGRLayer>(res) : R_NilValue;
+}
+
+// [[Rcpp::export]]
+void OGR_DS_ReleaseResultSet(SEXP ds, SEXP lyr)
+{
+  OGRDataSourceH h1 = unwrapHandle<OGRDataSource>(ds);
+  OGRLayerH h2 = unwrapHandle<OGRLayer>(lyr);
+  OGR_DS_ReleaseResultSet(h1, h2);
+}
+
+// [[Rcpp::export]]
+SEXP RGDAL_GetGeomEnv(SEXP geom)
+{
+    OGRGeometryH hG = unwrapHandle<OGRGeometry>(geom);
+    OGREnvelope env;
+    OGR_G_GetEnvelope(hG, &env);
+    OGRGeometryH res = extentToGeom(env);
+    return wrapHandle<OGRGeometry>(res);
+}
+
+// [[Rcpp::export]]
+SEXP RGDAL_GetFIDs(SEXP lyr)
+{
+    OGRLayerH hL = unwrapHandle<OGRLayer>(lyr);
+    OGR_L_ResetReading(hL);
+    int n = OGR_L_GetFeatureCount(hL, 1);
+    NumericVector res(n);
+    for ( int i = 0; i != n; ++i )
+    {
+        OGRFeatureH hF = OGR_L_GetNextFeature(hL);
+        res[i] = (double) OGR_F_GetFID(hF);
+    }
+    OGR_L_ResetReading(hL);
+    return res;
+}
+
+// [[Rcpp::export]]
+SEXP RGDAL_GetFeature(SEXP lyr, double index)
+{
+    OGRLayerH hL = unwrapHandle<OGRLayer>(lyr);
+    OGRFeatureH res = OGR_L_GetFeature(hL, (long) index);
+    return wrapHandle<OGRFeature>(res);
+}
+
+// [[Rcpp::export]]
+SEXP OGR_F_GetGeometryRef(SEXP feat)
+{
+  OGRFeatureH h = unwrapHandle<OGRFeature>(feat);
+  OGRGeometryH res = OGR_F_GetGeometryRef(h);
+  return wrapHandle<OGRGeometry>(res);
+}
+
+// [[Rcpp::export]]
+const char* OGR_G_GetGeometryType(SEXP geom)
+{
+  OGRGeometryH hG = unwrapHandle<OGRGeometry>(geom);
+  switch ( OGR_G_GetGeometryType(hG) )
+  {
+    case wkbPoint:
+      return "wkbPoint";
+    case wkbLineString:
+      return "wkbLineString";
+    case wkbPolygon:
+      return "wkbPolygon";
+    case wkbMultiPoint:
+      return "wkbMultiPoint";
+    case wkbMultiLineString:
+      return "wkbMultiLineString";
+    case wkbMultiPolygon:
+      return "wkbMultiPolygon";
+    case wkbGeometryCollection:
+      return "wkbGeometryCollection";
+    case wkbLinearRing:
+      return "wkbLinearRing";
+    case wkbPoint25D:
+      return "wkbPoint25D";
+    case wkbLineString25D:
+      return "wkbLineString25D";
+    case wkbPolygon25D:
+      return "wkbPolygon25D";
+    case wkbMultiPoint25D:
+      return "wkbMultiPoint25D";
+    case wkbMultiLineString25D:
+      return "wkbMultiLineString25D";
+    case wkbMultiPolygon25D:
+      return "wkbMultiPolygon25D";
+    case wkbGeometryCollection25D:
+      return "wkbGeometryCollection25D";
+    default:
+      return "Unknown geometry type";
+  }
+}
+
+// [[Rcpp::export]]
+SEXP OGR_L_GetNextFeature(SEXP lyr)
+{
+  OGRLayerH h = unwrapHandle<OGRLayer>(lyr);
+  OGRFeatureH res = OGR_L_GetNextFeature(h);
+  return wrapHandle<OGRFeature>(res);
+}
+
+// [[Rcpp::export]]
+int GetLayerFieldCount(SEXP lyr)
+{
+  OGRLayerH h = unwrapHandle<OGRLayer>(lyr);
+  OGRFeatureDefnH f = OGR_L_GetLayerDefn(h);
+  return f ? OGR_FD_GetFieldCount(f) : 0;
+}
+
+// [[Rcpp::export]]
+SEXP GetFieldNames(SEXP lyr)
+{
+  CharacterVector res;
+  OGRLayerH h = unwrapHandle<OGRLayer>(lyr);
+  OGRFeatureDefnH f = OGR_L_GetLayerDefn(h);
+  if ( ! f ) stop("Cannot get field definitions\n");
+  for ( int i = 0; i != OGR_FD_GetFieldCount(f); ++i )
+  {
+    OGRFieldDefnH fld = OGR_FD_GetFieldDefn(f, i);
+    if ( ! fld ) stop("Error retrieving field definition\n");
+    const char* fnam = OGR_Fld_GetNameRef(fld);
+    res.push_back(fnam);
+  }
+  return res;
+}
+
+

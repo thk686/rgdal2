@@ -16,7 +16,8 @@
 #' f = system.file("example-data/butterfly.jpg", package = "rgdal2")
 #' x = openGDAL(f)
 #' show(x)
-#'   
+#'
+#' @family gdal-io   
 #' @export
 openGDAL = function(fname, readonly = TRUE, shared = TRUE)
 {
@@ -38,7 +39,8 @@ openGDAL = function(fname, readonly = TRUE, shared = TRUE)
 #' f = system.file("example-data/butterfly.jpg", package = "rgdal2")
 #' x = openGDALBand(f)
 #' show(x)
-#'   
+#'
+#' @family gdal-io
 #' @export
 openGDALBand = function(fname, band = 1L, readonly = TRUE)
 {
@@ -77,7 +79,8 @@ openGDALBand = function(fname, band = 1L, readonly = TRUE)
 #' @examples
 #' x = newGDALDataset(100, 100, 3, driver = "GTiff", nosave = TRUE)
 #' show(x); dim(x)
-#'   
+#'
+#' @family gdal-io   
 #' @export
 newGDALDataset = function(nrow, ncol, nbands = 1,
                           dataType = 'Int32', driver = 'MEM',
@@ -106,11 +109,12 @@ newGDALDataset = function(nrow, ncol, nbands = 1,
 #' x = newGDALDataset(10, 10, 3)
 #' y = copyDataset(x)
 #' show(x); show(y)
-#'   
+#'
+#' @family gdal-io   
 #' @export
 copyDataset = function(x, file = tempfile(), driver = "MEM")
 {
-    assertClass(x, "RGDAL2Dataset")
+    x = checkDataset(x)
     handle = RGDAL_CreateCopy(x@handle, file, driver)
     newRGDAL2Dataset(handle)
 }
@@ -673,153 +677,6 @@ setMethod('[<-',
   writeRasterBand(x, i, j, ..., value = value)
 })
 
-#' Read a natural block of data
-#'
-#' @param i the block row
-#' @param j the block column
-#' 
-#' @details
-#' GDAL raster bands have an internal blocking strcuture. This is usually
-#' a simple scanline, pixel arrangement where each image row is a single
-#' block of data. Other datasets may have internal storage arranged as
-#' tiled blocks of data. Block access is much faster than random IO as
-#' these blocks are cached by the GDAL IO layer. A strategy for efficient
-#' update of large files is to read a block of data, modify it, and then
-#' write the block either into a new dataset or into the original dataset
-#' overwriting the original data.
-#' 
-#' 
-#' 
-#' @seealso writeBlock
-#' 
-#' @examples
-#' f = system.file("example-data/gtopo30_vandg.tif", package = "rgdal2")
-#' x = openGDALBand(f)
-#' a = readBlock(x, 1, 1)
-#' dim(a)
-#' 
-#' @export
-readBlock = function(object, i, j)
-{
-    object = checkBand(object)
-    RGDAL_ReadBlock(object@handle, i, j)
-}
-
-#' Write a natural block of data
-#'
-#' @param object a raster band or dataset
-#' @param i the block row
-#' @param j the block column
-#' 
-#' @details
-#' GDAL raster bands have an internal blocking strcuture. This is usually
-#' a simple scanline, pixel arrangement where each image row is a single
-#' block of data. Other datasets may have internal storage arranged as
-#' tiled blocks of data. Block access is much faster than random IO as
-#' these blocks are cached by the GDAL IO layer. A strategy for efficient
-#' update of large files is to read a block of data, modify it, and then
-#' write the block either into a new dataset or into the original dataset
-#' overwriting the original data.
-#' 
-#' @seealso readBlock
-#' 
-#' @examples
-#' f = system.file("example-data/gtopo30_vandg.tif", package = "rgdal2")
-#' x = openGDALBand(f)
-#' a = readBlock(x, 1, 1)
-#' 
-#' @export
-writeBlock = function(object, i, j, x)
-{
-    object = checkBand(object)
-    if ( RGDAL_WriteBlock(object@handle, i, j, x) )
-        stop("Error writing block")
-    invisible(object)
-}
-
-blockCoordIter = function(b, block.size = getBlockSize(b))
-{
-    x = 1L
-    y = 1L
-    xx = ncol(b)
-    yy = nrow(b)
-    block.size = rep(block.size, length = 2)
-    xby = block.size[2L]
-    yby = block.size[1L]
-    f = function()
-    {
-        if ( y > yy ) stop('StopIteration')
-        yrange = y:min(c(yy, y + yby - 1L))
-        xrange = x:min(c(xx, x + xby - 1L))
-        x <<- x + xby
-        if ( x > xx )
-        {
-            x <<- 1L
-            y <<- y + yby
-        }
-        list(x = xrange, y = yrange)
-    }
-    structure(list(nextElem = f), class = c('rgdal2BlockIter', 'abstractiter', 'iter'))
-}
-
-blockIter = function(b, block.size = getBlockSize(b), native.indexing = FALSE)
-{
-    x = 1L
-    y = 1L
-    xx = ncol(b)
-    yy = nrow(b)
-    block.size = rep(block.size, length = 2)
-    xby = block.size[2L]
-    yby = block.size[1L]
-    f = function()
-    {
-        if ( y > yy ) stop('StopIteration')
-        yrange = y:min(c(yy, y + yby - 1L))
-        xrange = x:min(c(xx, x + xby - 1L))
-        res = b[yrange, xrange, drop = FALSE]
-        x <<- x + xby
-        if ( x > xx )
-        {
-            x <<- 1L
-            y <<- y + yby
-        }
-        list(x = xrange, y = yrange, z = res, native.indexing = native.indexing)
-    }
-    structure(list(nextElem = f), class = c('rgdal2BlockIter', 'abstractiter', 'iter'))
-}
-
-foreach.block = function(x,
-                         out = newGDALDataset(nrow(x), ncol(x)),
-                         block.size = getBlockSize(x),
-                         init = getBand(out),
-                         combine = function(out, i)
-                                   {
-                                       out[i$y, i$x, native.indexing = i$native.indexing] = i$z
-                                       return(out)
-                                   },
-                         final = function(x) out,
-                         inorder = FALSE,
-                         native.indexing = FALSE)
-{
-  args = list()
-  if ( inherits(x, 'RGDAL2RasterBand') )
-  {
-    args[['i']] = blockIter(x, block.size, native.indexing) 
-  }
-  else
-  {
-    for ( i in 1:nband(x) )
-    {
-      args[[paste0('i', i)]] = blockIter(getBand(x, i), block.size, native.indexing)
-    }
-  }
-  args[['.init']] = init
-  args[['.combine']] = combine
-  args[['.final']] = final
-  args[['.inorder']] = inorder
-  do.call('foreach', args)
-}
-
 setMethod("extent", "RGDAL2Dataset",
 function(object)
 {
@@ -851,8 +708,175 @@ function(object, SRS, file = tempfile(), driver = "MEM", thresh = 0.125)
     getBand(newRGDAL2Dataset(res))
 })
 
+#' Get a block-matrix object
+#' 
+#' Construct an object that acts as a matrix of raster blocks
+#' 
+#' @param b the band or dataset
+#' 
+#' @details
+#' GDAL raster bands have an internal blocking strcuture. This is usually
+#' a simple scanline, pixel arrangement where each image row is a single
+#' block of data. Other datasets may have internal storage arranged as
+#' tiled blocks of data. Block access is much faster than random IO as
+#' these blocks are cached by the GDAL IO layer. A strategy for efficient
+#' update of large files is to read a block of data, modify it, and then
+#' write the block either into a new dataset or into the original dataset
+#' overwriting the original data.
+#' 
+#' The returned object acts as a matrix in so far as it
+#' has methods for the \code{[[]]} operator and you can retrieve
+#' its dimensions. Indexing the block-matrix object will return
+#' the corresponding block of raster data.
+#' 
+#' Note that especially for tiled data, the blocks will not perfectly
+#' subdivide the raster. Portions of marginal blocks on the right and
+#' bottom will often extend beyond the raster extent. Out-of-bound block pixel
+#' values will usually be set to \code{NA} in that case. (Raw byte data does
+#' not have an \code{NA} value defined, so in that case the out-of-bounds
+#' pixels will be set to zero.) However the behavior is driver dependend
+#' and therefore may vary by file type. The returned blocks are not truncated
+#' to fit within the raster.
+#' 
+#' Whem writing blocks, the \code{\link{storage.mode}} of the value parameter
+#' must match that of the raster band. The dimensions of the object do not
+#' matter; however its length must be equal to the number of elements in a
+#' block. All integral types other than raw are handled as \code{integer} type.
+#' 
+#' @return
+#' a \code{RGDAL2BlockMatrix} object, a raster block or the block dimensions
+#'
+#' @examples
+#' f = system.file("example-data/butterfly.jpg", package = "rgdal2")
+#' x = openGDAL(f)
+#' y = copyDataset(x)
+#' m = getBlockMatrix(y)
+#' dim(m)
+#' dim(m[[1, 1]])
+#' z = m[[1, 1]]
+#' z[] = as.raw(42)
+#' m[[1, 1]] = z
+#' m[[1, 1]][1, 1]
+#' 
+#' @rdname block-matrix
+#' @export
+getBlockMatrix = function(b)
+{
+  b = checkBand(b)
+  new("RGDAL2BlockMatrix", band = b)
+}
 
+#' @rdname block-matrix
+#' @param i the block row
+#' @param j the block column
+#' @param drop if true, drop singleton dimensions
+#' @export
+setMethod('[[', 'RGDAL2BlockMatrix',
+function(x, i, j, ...)
+{
+  RGDAL_ReadBlock(x@band@handle, i, j)
+})
 
+#' @rdname block-matrix
+#' @param value an r object of appropriate type and length
+#' @export
+setMethod('[[<-', 'RGDAL2BlockMatrix',
+function(x, i, j, ..., value)
+{
+  if ( RGDAL_WriteBlock(x@band@handle, i, j, value) )
+    stop("Error writing block")
+  invisible(x)
+})
 
+#' @rdname block-matrix
+#' @export
+setMethod('dim', 'RGDAL2BlockMatrix',
+function(x)
+{
+  ceiling(dim(x@band) / getBlockSize(x@band))
+})
+
+blockCoordIter = function(b, block.size = getBlockSize(b))
+{
+  x = 1L
+  y = 1L
+  xx = ncol(b)
+  yy = nrow(b)
+  block.size = rep(block.size, length = 2)
+  xby = block.size[2L]
+  yby = block.size[1L]
+  f = function()
+  {
+    if ( y > yy ) stop('StopIteration')
+    yrange = y:min(c(yy, y + yby - 1L))
+    xrange = x:min(c(xx, x + xby - 1L))
+    x <<- x + xby
+    if ( x > xx )
+    {
+      x <<- 1L
+      y <<- y + yby
+    }
+    list(x = xrange, y = yrange)
+  }
+  structure(list(nextElem = f), class = c('rgdal2BlockIter', 'abstractiter', 'iter'))
+}
+
+blockIter = function(b, block.size = getBlockSize(b), native.indexing = FALSE)
+{
+  x = 1L
+  y = 1L
+  xx = ncol(b)
+  yy = nrow(b)
+  block.size = rep(block.size, length = 2)
+  xby = block.size[2L]
+  yby = block.size[1L]
+  f = function()
+  {
+    if ( y > yy ) stop('StopIteration')
+    yrange = y:min(c(yy, y + yby - 1L))
+    xrange = x:min(c(xx, x + xby - 1L))
+    res = b[yrange, xrange, drop = FALSE]
+    x <<- x + xby
+    if ( x > xx )
+    {
+      x <<- 1L
+      y <<- y + yby
+    }
+    list(x = xrange, y = yrange, z = res, native.indexing = native.indexing)
+  }
+  structure(list(nextElem = f), class = c('rgdal2BlockIter', 'abstractiter', 'iter'))
+}
+
+foreach.block = function(x,
+                         out = newGDALDataset(nrow(x), ncol(x)),
+                         block.size = getBlockSize(x),
+                         init = getBand(out),
+                         combine = function(out, i)
+                         {
+                           out[i$y, i$x, native.indexing = i$native.indexing] = i$z
+                           return(out)
+                         },
+                         final = function(x) out,
+                         inorder = FALSE,
+                         native.indexing = FALSE)
+{
+  args = list()
+  if ( inherits(x, 'RGDAL2RasterBand') )
+  {
+    args[['i']] = blockIter(x, block.size, native.indexing) 
+  }
+  else
+  {
+    for ( i in 1:nband(x) )
+    {
+      args[[paste0('i', i)]] = blockIter(getBand(x, i), block.size, native.indexing)
+    }
+  }
+  args[['.init']] = init
+  args[['.combine']] = combine
+  args[['.final']] = final
+  args[['.inorder']] = inorder
+  do.call('foreach', args)
+}
 
 

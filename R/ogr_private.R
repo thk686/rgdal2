@@ -4,23 +4,18 @@
 
 newRGDAL2Datasource = function(handle)
 {
-    if ( isNullPtr(handle) ) return(NULL)
-    attr(handle, "class") = NULL
     reg.finalizer(handle, OGRReleaseDataSource, TRUE)
     new("RGDAL2Datasource", handle = handle)
 }
 
 newRGDAL2Layer = function(handle, datasource)
 {
-    if ( isNullPtr(handle) ) return(NULL)
-    attr(handle, "class") = NULL
     new("RGDAL2Layer", handle = handle, datasource = datasource)
 }
 
 newRGDAL2SQLLayer = function(handle, datasource, sql)
 {
-    if ( isNullPtr(handle) ) return(NULL)
-    attr(handle, "class") = NULL
+    if ( is.null(handle) ) return(NULL)
     f = function(lyrExtPtr) OGR_DS_ReleaseResultSet(datasource@handle, lyrExtPtr)
     reg.finalizer(handle, f, TRUE)
     new("RGDAL2SQLLayer", handle = handle, datasource = datasource, sql = sql)
@@ -28,23 +23,18 @@ newRGDAL2SQLLayer = function(handle, datasource, sql)
 
 newRGDAL2Feature = function(handle, layer)
 {
-    if ( isNullPtr(handle) ) return(NULL)
-    attr(handle, "class") = NULL
     new("RGDAL2Feature", handle = handle, layer = layer)
 }
 
 newRGDAL2Geometry = function(handle)
 {
-    if ( isNullPtr(handle) ) return(NULL)
-    attr(handle, "class") = NULL
-    reg.finalizer(handle, function(x) OGR_G_DestroyGeometry(x))
+    if ( is.null(handle) ) return(NULL)
+    reg.finalizer(handle, function(x) RGDAL_OGR_G_DestroyGeometry(x))
     new("RGDAL2Geometry", handle = handle)
 }
 
 newRGDAL2LayerGeometry = function(handle, layer)
 {
-    if ( isNullPtr(handle) ) return(NULL)
-    attr(handle, "class") = NULL
     new("RGDAL2LayerGeometry", handle = handle, layer = layer)
 }
 
