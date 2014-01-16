@@ -23,7 +23,10 @@ newRGDAL2SQLLayer = function(handle, datasource, sql)
 
 newRGDAL2Feature = function(handle, layer)
 {
-    new("RGDAL2Feature", handle = handle, layer = layer)
+    if ( is.null(handle) )
+      NULL
+    else
+      new("RGDAL2Feature", handle = handle, layer = layer)
 }
 
 newRGDAL2Geometry = function(handle)

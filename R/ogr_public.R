@@ -4,7 +4,7 @@
 
 #' Open an OGR datasource
 #'
-#' Opens the datasource associated with the specified file
+#' Opens the datasource associated with the specified file.
 #' 
 #' @param fname the file name
 #' @param readonly if true, disable write operations
@@ -75,6 +75,15 @@ function(object)
 #' 
 #' @param x the data source
 #' 
+#' @examples
+#' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
+#' x = openOGR(f)
+#' length(x)
+#' names(x)
+#' class(x[[1]])
+#' class(x[1])
+#' class(x$"tl_2013_us_state")
+#' 
 #' @aliases vector-data-source
 #' @rdname data-source-methods
 #' @export
@@ -123,12 +132,11 @@ function(x, name)
     getLayer(x, name)
 })
 
-#' @export
 setMethod("properties", "RGDAL2Datasource",
 function(object)
 {
     list(create.layer = testCapability(object, "create.layer"),
-         delete.layer = testCapability(object, "create.layer"),
+         delete.layer = testCapability(object, "delete.layer"),
          create.geom.field = testCapability(object, "create.geom.field"))
 })
 
@@ -151,6 +159,18 @@ openOGRLayer = function(fname, layer = 1L, readonly = TRUE)
     getLayer(openOGR(fname, readonly), layer)
 }
 
+#' Fetch layer name
+#' 
+#' @param x a layer object
+#' @return the name of the layer
+#' 
+#' @examples
+#' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
+#' x = openOGRLayer(f)
+#' getLayerName(x)
+#' 
+#' @family layer-io
+#' @export
 getLayerName = function(x)
 {
     assertClass(x, "RGDAL2Layer")
@@ -178,6 +198,23 @@ function(object)
     }
 })
 
+#' Methods for data layers
+#' 
+#' Quasi-dataframe-like access to layers in a data layer (not fully implemented).
+#' 
+#' @param x the data source
+#' 
+#' @examples
+#' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
+#' x = openOGRLayer(f)
+#' dim(x)
+#' length(x)
+#' names(x)
+#' 
+#' @family layer-io
+#' @aliases vector-layer
+#' @rdname layer-methods
+#' @export
 setMethod('dim', 'RGDAL2Layer',
 function(x)
 {
@@ -186,12 +223,16 @@ function(x)
   c(rows, cols)
 })
 
+#' @rdname layer-methods
+#' @export
 setMethod('length', 'RGDAL2Layer',
 function(x)
 {
   GetLayerFieldCount(x@handle)
 })
 
+#' @rdname layer-methods
+#' @export
 setMethod('names', 'RGDAL2Layer',
 function(x)
 {
@@ -236,6 +277,7 @@ function(object)
 #' y = getSQLLayer(x, "select * from tl_2013_us_state where \'NAME\' = \"Texas\"")
 #' show(y)
 #' 
+#' @family ogr-io
 #' @rdname sql-layer
 #' @export
 getSQLLayer = function(x, sql)
@@ -286,6 +328,7 @@ function(object)
 #' no geometries remain. To start with the first geometry, this function must
 #' be called if the cursor is not already at the begining.
 #' 
+#' @family layer-io
 #' @export
 rewind = function(x)
 {
@@ -294,6 +337,19 @@ rewind = function(x)
     invisible(x)
 }
 
+#' Fetch a feature using its identifier
+#' 
+#' @param x an OGR layer
+#' @param fid the feature identifier
+#' 
+#' @details
+#' Each "row" of a data layer is called a feature. Every feature is assigned a unique
+#' identifier or "FID". This function uses the FID as a key into the layer. This function
+#' does not return a geometry. Geometries must be extracted from a feature using
+#' \code{\link{getGeometry}}.
+#' 
+#' @family layer-io
+#' @export
 getFeature = function(x, fid)
 {
     assertClass(x, "RGDAL2Layer")
@@ -301,10 +357,29 @@ getFeature = function(x, fid)
     newRGDAL2Feature(feat, x)
 }
 
+#' Fetch the next feature
+#' 
+#' Returns the next feature in a layer
+#' 
+#' @param x an OGR layer
+#' 
+#' @details
+#' Each layer holds an internal cursor. This function fetches the next
+#' feature in a sequence and increments the cursor. It can be called
+#' repeatedly to get all the features in a layer.
+#' 
+#' @examples
+#' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
+#' x = openOGRLayer(f)
+#' g = getNextGeometry(x)
+#' show(g)
+#' 
+#' @family layer-io
+#' @export
 getNextFeature = function(x)
 {
     assertClass(x, "RGDAL2Layer")
-    feat = OGR_L_GetNextFeature(x@handle)
+    feat = RGDAL_OGR_L_GetNextFeature(x@handle)
     newRGDAL2Feature(feat, x)
 }
 
@@ -319,14 +394,13 @@ getNextFeature = function(x)
 #' geometry in a sequence and increments the cursor. It can be called
 #' repeatedly to get all the geometries in a layer.
 #' 
-#' @seealso \code{\link{rewind}}
-#' 
 #' @examples
 #' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
 #' x = openOGRLayer(f)
 #' g = getNextGeometry(x)
 #' show(g)
 #' 
+#' @family layer-io
 #' @export
 getNextGeometry = function(x)
 {
@@ -397,7 +471,30 @@ geometryIter = function(x, reset = TRUE)
     structure(list(nextElem = f), class = c('rgdal2geometryIter', 'abstractiter', 'iter'))
 }
 
-setAs('RGDAL2Layer', 'data.frame', function(from)
+#' Dump a layer as a dataframe
+#' 
+#' Converts a layer to a dataframe.
+#' 
+#' @param from a data layer object
+#' 
+#' @details
+#' A dataframe is constructed containing all the fields of the data layer.
+#' A geometries are returned in the last column and FIDs in the first column.
+#' The returned dataframe has a special print function to avoid printing all
+#' of the geometries, which could be very large.
+#'
+#' @examples 
+#' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
+#' x = openOGRLayer(f)
+#' y = as(x, 'data.frame')
+#' head(y)
+#' 
+#' @name as
+#' @aliases as-data-frame
+#' @family layer-io
+#' @export
+setAs('RGDAL2Layer', 'data.frame',
+function(from)
 {
     res = foreach(i = featureIter(from),
                   .init = data.frame(),
@@ -406,14 +503,17 @@ setAs('RGDAL2Layer', 'data.frame', function(from)
         getFields(i)
     }
     res = cbind(getIDs(from), res)
-    names(res)[1] = OGR_L_GetFIDColumn(from@handle)
-    geomfname = OGR_L_GetGeometryColumn(from@handle)
+    fidcolnam = RGDAL_OGR_L_GetFIDColumn(from@handle)
+    names(res)[1] = ifelse(nchar(fidcolnam), fidcolname, "FID")
+    geomfname = RGDAL_OGR_L_GetGeometryColumn(from@handle)
+    if ( nchar(geomfname) == 0 ) geomfname = "GEOM"
     class(res) = c('RGDAL2LayerDF', class(res))
     res[[geomfname]] = getGeometries(from)
     rownames(res) = NULL
     res
 })
 
+#' @export
 print.RGDAL2LayerDF = function(x, ...)
 {
     i = which(sapply(x, function(a)
@@ -424,7 +524,7 @@ print.RGDAL2LayerDF = function(x, ...)
     {
         x[[ii]] = sapply(x[[ii]], function(a)
         {
-            OGR_G_GetGeometryType(a@handle)
+            RGDAL_OGR_G_GetGeometryType(a@handle)
         })
     }
     class(x) = class(x)[-1]
@@ -452,7 +552,8 @@ print.RGDAL2LayerDF = function(x, ...)
 #' @aliases extent
 #' @rdname extent
 #' @export
-setMethod("extent", "RGDAL2Layer", function(object)
+setMethod("extent", "RGDAL2Layer",
+function(object)
 {
     sf = getSpatialFilter(object)
     if ( !is.null(sf) ) return(extent(sf))
@@ -497,9 +598,29 @@ setSelectWhere = function(layer, where)
 #
 setMethod("show", "RGDAL2Feature", function(object)
 {
-    RGDAL_PrintFeature(object@handle)
+  file = tempfile()
+  on.exit(unlink(file))
+  RGDAL_PrintFeature(object@handle, file)
+  res = readLines(file)
+  catLines(res)
+  return(invisible(res))
 })
 
+#' Get the fields of a feature
+#' 
+#' Return fields as R-native objects
+#' 
+#' @param x the feature
+#' 
+#' @return a list of field values
+#' 
+#' @examples
+#' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
+#' x = openOGRLayer(f)
+#' y = getNextFeature(x)
+#' unlist(getFields(y))
+#' 
+#' @export
 getFields = function(x)
 {
     assertClass(x, "RGDAL2Feature")
@@ -512,6 +633,13 @@ getID = function(x)
     RGDAL_GetFID(x@handle)
 }
 
+#' Fetch a geometry from a feature
+#' 
+#' @param x the feature object
+#' 
+#' @return a geometry object
+#' 
+#' @export
 getGeometry = function(x)
 {
     stopifnot(inherits(x, "RGDAL2Feature"))
@@ -519,7 +647,8 @@ getGeometry = function(x)
     newRGDAL2LayerGeometry(geom, x@layer)
 }
 
-setMethod("getSRS", "RGDAL2Feature", function(object)
+setMethod("getSRS", "RGDAL2Feature",
+function(object)
 {
     getSRS(object@layer)
 })
@@ -605,7 +734,8 @@ function(x, i)
 
 #' @rdname extent
 #' @export
-setMethod("extent", "RGDAL2Geometry", function(object)
+setMethod("extent", "RGDAL2Geometry",
+function(object)
 {
     res = RGDAL_GetGeomEnv(object@handle)
     res = newRGDAL2Geometry(res)
@@ -614,7 +744,8 @@ setMethod("extent", "RGDAL2Geometry", function(object)
 
 })
 
-setMethod("properties", "RGDAL2Geometry", function(object)
+setMethod("properties", "RGDAL2Geometry",
+function(object)
 {
     list(is.empty = OGR_G_IsEmpty(x@handle) == 1,
          is.valid = OGR_G_IsValid(x@handle) == 1,

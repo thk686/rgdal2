@@ -795,7 +795,7 @@ SEXP OGR_F_GetGeometryRef(SEXP feat)
 }
 
 // [[Rcpp::export]]
-const char* OGR_G_GetGeometryType(SEXP geom)
+const char* RGDAL_OGR_G_GetGeometryType(SEXP geom)
 {
   OGRGeometryH hG = unwrapHandle<OGRGeometry>(geom);
   switch ( OGR_G_GetGeometryType(hG) )
@@ -836,11 +836,13 @@ const char* OGR_G_GetGeometryType(SEXP geom)
 }
 
 // [[Rcpp::export]]
-SEXP OGR_L_GetNextFeature(SEXP lyr)
+SEXP RGDAL_OGR_L_GetNextFeature(SEXP lyr)
 {
   OGRLayerH h = unwrapHandle<OGRLayer>(lyr);
   OGRFeatureH res = OGR_L_GetNextFeature(h);
-  return wrapHandle<OGRFeature>(res);
+  return res ?
+      wrapHandle<OGRFeature>(res) :
+      R_NilValue;
 }
 
 // [[Rcpp::export]]
@@ -868,4 +870,74 @@ SEXP GetFieldNames(SEXP lyr)
   return res;
 }
 
+// [[Rcpp::export]]
+const char* RGDAL_OGR_L_GetFIDColumn(SEXP lyr)
+{
+  OGRLayerH h = unwrapHandle<OGRLayer>(lyr);
+  return OGR_L_GetFIDColumn(h); 
+}
 
+// [[Rcpp::export]]
+const char* RGDAL_OGR_L_GetGeometryColumn(SEXP lyr)
+{
+  OGRLayerH h = unwrapHandle<OGRLayer>(lyr);
+  return OGR_L_GetGeometryColumn(h);
+}
+
+// Need to convert to Rcpp
+// [[Rcpp::export]]
+SEXP RGDAL_GetFields(SEXP feat)
+{
+    OGRFeatureH hF = unwrapHandle<OGRFeature>(feat);
+    size_t len = OGR_F_GetFieldCount(hF);
+    SEXP res = PROTECT(Rf_allocVector(VECSXP, len));
+    SEXP names = PROTECT(Rf_allocVector(STRSXP, len));
+    for ( size_t i = 0; i != len; ++i )
+    {
+        OGRFieldDefnH fd = OGR_F_GetFieldDefnRef(hF, i);
+        SET_STRING_ELT(names, i, Rf_mkChar(OGR_Fld_GetNameRef(fd)));
+        switch ( OGR_Fld_GetType(fd) )
+        {
+            case OFTInteger:
+                SET_VECTOR_ELT(res, i, Rf_ScalarInteger(OGR_F_GetFieldAsInteger(hF, i)));
+            break;
+            case OFTReal:
+                SET_VECTOR_ELT(res, i, Rf_ScalarReal(OGR_F_GetFieldAsDouble(hF, i)));                
+            break;
+            default:
+                SET_VECTOR_ELT(res, i, Rf_mkString(OGR_F_GetFieldAsString(hF, i)));                                
+            break;
+        }
+    }
+    Rf_setAttrib(res, R_NamesSymbol, names);
+    UNPROTECT(2);
+    return res;
+}
+
+// [[Rcpp::export]]
+void RGDAL_PrintFeature(SEXP feat, const char* fname)
+{
+    OGRFeatureH hF = unwrapHandle<OGRFeature>(feat);
+    FILE* f = std::fopen(fname, "w");
+    OGR_F_DumpReadable(hF, f);
+    std::fclose(f);
+}
+
+// [[Rcpp::export]]
+SEXP RGDAL_GetGeometries(SEXP lyr)
+{
+    OGRLayerH hL = unwrapHandle<OGRLayer>(lyr);
+    OGR_L_ResetReading(hL);
+    size_t n = OGR_L_GetFeatureCount(hL, 1);
+    SEXP res = PROTECT(Rf_allocVector(VECSXP, n));
+    for ( size_t i = 0; i != n; ++i )
+    {
+        OGRFeatureH hF = OGR_L_GetNextFeature(hL);
+        OGRGeometryH hG = OGR_F_GetGeometryRef(hF);
+        SEXP geomPtr = PROTECT(R_MakeExternalPtr((void*) hG, R_NilValue, R_NilValue));
+        SET_VECTOR_ELT(res, i, geomPtr);                                
+    }
+    OGR_L_ResetReading(hL);
+    UNPROTECT(n + 1);
+    return res;
+}
