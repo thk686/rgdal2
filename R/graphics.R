@@ -6,10 +6,24 @@
 # Grid stuff
 #
 
+#' Convert a geometry to a grob
+#' 
+#' Converts the geometry to a grid graphics object
+#' 
+#' @param object the geometry
+#' @param units grid units to use
+#' @param ... passed to grid functions
+#' 
+#' @details
+#' Grid functions operate on grobs. This function generates grobs you can
+#' use in creating grid plots. It is more convenient to use \code{\link{draw}}
+#' as that will do the conversion and build the plot.
+#' 
+#' @export
 geometryGrob = function(object, ..., units = "native")
 {
     points = getPoints(object)
-    switch(OGR_G_GetGeometryType(object@handle),
+    switch(RGDAL_OGR_G_GetGeometryType(object@handle),
            wkbPoint = pointsGrob(points$x, points$y, default.units = units, ...),
            wkbLinearRing = polylineGrob(points$x, points$y, default.units = units, ...),
            wkbLineString = linesGrob(points$x, points$y, default.units = units, ...),

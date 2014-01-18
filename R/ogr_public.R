@@ -294,7 +294,7 @@ execSQL = function(x, sql)
     assertClass(x, "RGDAL2Datasource")
     lyr = RGDAL_ExecSQL(x@handle, sql)
     OGR_DS_ReleaseResultSet(x@handle, lyr)
-    invisible()
+    invisible(x)
 }
 
 setMethod('show', 'RGDAL2SQLLayer',
@@ -410,12 +410,38 @@ getNextGeometry = function(x)
     getGeometry(feat)
 }
 
+#' Fetch feature IDs
+#' 
+#' Return a list of feature IDs
+#' 
+#' @param x a layer object
+#' 
+#' @details
+#' Every row of a layer has a unique feature id. This function returns them.
+#' Usually this will be a sequence of integers. There is no requirement that
+#' they be contiguous.
+#' 
+#' @examples
+#' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
+#' x = openOGRLayer(f)
+#' getIDs(x)
+#' 
+#' @export
 getIDs = function(x)
 {
     assertClass(x, "RGDAL2Layer")
     unclass(RGDAL_GetFIDs(x@handle))
 }
 
+#' Apply a function to all features in a layer
+#' 
+#' @parm x a data layer
+#' @parm applyFun a function or string
+#' 
+#' @details
+#' The call signature for is \code{function(feature, ...)}.
+#' 
+#' @export
 lapplyFeatures = function(x, applyFun, ...)
 {
     applyFun = match.fun(applyFun)
@@ -425,6 +451,15 @@ lapplyFeatures = function(x, applyFun, ...)
     res
 }
 
+#' Apply a function to all geometries in a layer
+#' 
+#' @parm x a data layer
+#' @parm applyFun a function or string
+#' 
+#' @details
+#' The call signature for is \code{function(geometry, ...)}.
+#' 
+#' @export
 lapplyGeometries = function(x, applyFun, ...)
 {
     applyFun = match.fun(applyFun)
@@ -434,6 +469,31 @@ lapplyGeometries = function(x, applyFun, ...)
     res
 }
 
+#' Fetch all geometries from a layer
+#' 
+#' Return a vector of geometries
+#' 
+#' @param x a layer object
+#' 
+#' @details
+#' The layer will be \code{\link{rewound}} and all geometries
+#' extracted. After this function is called, the internal feature
+#' cursor will be past the end of the feature list. You must call
+#' \code{\link{rewind}} again before fetching features from the
+#' layer.
+#' 
+#' @examples
+#' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
+#' x = openOGRLayer(f)
+#' y = getGeometries(x)
+#' draw(extent(x))
+#' invisible(lapply(y,
+#' function(g)
+#' {
+#'  draw(extent(g), overlay = TRUE)
+#' }))
+#' 
+#' @export
 getGeometries = function(x)
 {
     rewind(x)
@@ -445,6 +505,25 @@ getGeometries = function(x)
     unlist(res)
 }
 
+#' Create feature iterator
+#' 
+#' Generate a feature iterator for use with \code{\link{foreach}}.
+#' 
+#' @param x a data layer
+#' @param reset if true, \code{\link{rewind}} the layer
+#' 
+#' @details
+#' Combined with \code{\link{foreach}} and \code{\link{%do%}} the
+#' returned object can be used to iterate over all features in a
+#' data layer.
+#' 
+#' @examples
+#' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
+#' x = openOGRLayer(f)
+#' area.sum = foreach(i = featureIter(x), .combine = "+") %%do%% i$ALAND
+#' show(area.sum)
+#' 
+#' @export
 featureIter = function(x, reset = TRUE)
 {
     assertClass(x, "RGDAL2Layer")
@@ -642,7 +721,7 @@ getID = function(x)
 #' @export
 getGeometry = function(x)
 {
-    stopifnot(inherits(x, "RGDAL2Feature"))
+    assertClass(x, "RGDAL2Feature")
     geom = OGR_F_GetGeometryRef(x@handle)
     newRGDAL2LayerGeometry(geom, x@layer)
 }
