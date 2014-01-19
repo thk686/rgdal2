@@ -371,7 +371,9 @@ getMaskFlags = function(x)
 #' show(x)
 #'
 #' @export
-setMethod('show', 'RGDAL2Dataset', function(object)
+setMethod('show',
+signature('RGDAL2Dataset'),
+function(object)
 {
     gdalinfo = Sys.which('gdalinfo')
     fname = GDALGetDescription(object@handle)
