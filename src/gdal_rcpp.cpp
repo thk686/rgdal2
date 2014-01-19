@@ -620,7 +620,7 @@ SEXP OSRClone(SEXP sref)
 }
 
 // [[Rcpp::export]]
-void OGR_G_AssignSpatialReference(SEXP geom, SEXP srs)
+void RGDAL_OGR_G_AssignSpatialReference(SEXP geom, SEXP srs)
 {
   OGRGeometryH h1 = unwrapHandle<OGRGeometry>(geom);
   OGRSpatialReferenceH h2 = unwrapHandle<OGRSpatialReference>(srs);

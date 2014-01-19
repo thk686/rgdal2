@@ -146,7 +146,7 @@ setMethod("setSRS",
 signature(object = "RGDAL2Geometry", SRS = "RGDAL2SpatialRef"),
 function(object, SRS)
 {
-    OGR_G_AssignSpatialReference(object@handle, SRS@handle)
+    RGDAL_OGR_G_AssignSpatialReference(object@handle, SRS@handle)
     invisible(object)
 })
 

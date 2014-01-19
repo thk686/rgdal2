@@ -15,7 +15,7 @@
 #' @return an object of class RGDAL2Datasource
 #' 
 #' @examples
-#' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
+#' f = system.file("example-data/continents", package = "rgdal2")
 #' x = openOGR(f)
 #' show(x)
 #' 
@@ -76,7 +76,7 @@ function(object)
 #' @param x the data source
 #' 
 #' @examples
-#' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
+#' f = system.file("example-data/continents", package = "rgdal2")
 #' x = openOGR(f)
 #' length(x)
 #' names(x)
@@ -148,7 +148,7 @@ function(object)
 #' @param readonly if true, dissable writes
 #' 
 #' @examples
-#' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
+#' f = system.file("example-data/continents", package = "rgdal2")
 #' x = openOGRLayer(f)
 #' show(x)
 #' 
@@ -165,7 +165,7 @@ openOGRLayer = function(fname, layer = 1L, readonly = TRUE)
 #' @return the name of the layer
 #' 
 #' @examples
-#' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
+#' f = system.file("example-data/continents", package = "rgdal2")
 #' x = openOGRLayer(f)
 #' getLayerName(x)
 #' 
@@ -205,7 +205,7 @@ function(object)
 #' @param x the data source
 #' 
 #' @examples
-#' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
+#' f = system.file("example-data/continents", package = "rgdal2")
 #' x = openOGRLayer(f)
 #' dim(x)
 #' length(x)
@@ -249,7 +249,7 @@ function(x)
 #' 
 #' @examples
 #' 
-#' #' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
+#' #' f = system.file("example-data/continents", package = "rgdal2")
 #' x = openOGRLayer(f)
 #' properties(x)
 #' 
@@ -289,7 +289,7 @@ function(object)
 #' associated geometries.
 #' 
 #' @examples
-#' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
+#' f = system.file("example-data/continents", package = "rgdal2")
 #' x = openOGR(f)
 #' y = getSQLLayer(x, "select * from tl_2013_us_state where \'NAME\' = \"Texas\"")
 #' show(y)
@@ -387,7 +387,7 @@ getFeature = function(x, fid)
 #' repeatedly to get all the features in a layer.
 #' 
 #' @examples
-#' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
+#' f = system.file("example-data/continents", package = "rgdal2")
 #' x = openOGRLayer(f)
 #' g = getNextGeometry(x)
 #' show(g)
@@ -413,7 +413,7 @@ getNextFeature = function(x)
 #' repeatedly to get all the geometries in a layer.
 #' 
 #' @examples
-#' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
+#' f = system.file("example-data/continents", package = "rgdal2")
 #' x = openOGRLayer(f)
 #' g = getNextGeometry(x)
 #' show(g)
@@ -440,7 +440,7 @@ getNextGeometry = function(x)
 #' they be contiguous.
 #' 
 #' @examples
-#' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
+#' f = system.file("example-data/continents", package = "rgdal2")
 #' x = openOGRLayer(f)
 #' getIDs(x)
 #' 
@@ -501,7 +501,7 @@ lapplyGeometries = function(x, applyFun, ...)
 #' layer.
 #' 
 #' @examples
-#' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
+#' f = system.file("example-data/continents", package = "rgdal2")
 #' x = openOGRLayer(f)
 #' y = getGeometries(x)
 #' draw(extent(x))
@@ -588,7 +588,7 @@ geometryIter = function(x, reset = TRUE)
 #' of the geometries, which could be very large.
 #'
 #' @examples 
-#' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
+#' f = system.file("example-data/continents", package = "rgdal2")
 #' x = openOGRLayer(f)
 #' y = as(x, 'data.frame')
 #' head(y)
@@ -650,7 +650,7 @@ print.RGDAL2LayerDF = function(x, ...)
 #' @value a geometry object
 #' 
 #' @examples
-#' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
+#' f = system.file("example-data/continents", package = "rgdal2")
 #' x = openOGRLayer(f)
 #' extent(x)
 #' 
@@ -740,7 +740,7 @@ setMethod("show", "RGDAL2Feature", function(object)
 #' @return a list of field values
 #' 
 #' @examples
-#' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
+#' f = system.file("example-data/continents", package = "rgdal2")
 #' x = openOGRLayer(f)
 #' y = getNextFeature(x)
 #' unlist(getFields(y))
