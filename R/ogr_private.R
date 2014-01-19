@@ -65,7 +65,7 @@ setMethod("testCapability", "RGDAL2Datasource",
                         create.layer = 'ODsCCreateLayer',
                         delete.layer = 'ODsCDeleteLayer',
                         create.geom.field = 'ODsCCreateGeomFieldAfterCreateLayer')
-    OGR_DS_TestCapability(object@handle, capability) == 1;
+    RGDAL_OGR_DS_TestCapability(object@handle, capability) == 1;
 })
 
 setMethod("testCapability", "RGDAL2Layer",
@@ -100,7 +100,7 @@ setMethod("testCapability", "RGDAL2Layer",
                         alter.field.defn = "AlterFieldDefn",
                         delete.feature = "DeleteFeature",
                         transactions = "Transactions")
-    OGR_L_TestCapability(object@handle, capability) == 1;
+    RGDAL_OGR_L_TestCapability(object@handle, capability) == 1;
 })
 
 drawPolygonGeom = function(x, ...)
@@ -118,13 +118,13 @@ drawPolygonGeom = function(x, ...)
 
 get.plot.fun = function(geom)
 {
-    switch(OGR_G_GetGeometryType(geom@handle),
-           wkbPoint = points,
-           wkbMultiPoint = points,
-           wkbLineString = lines,
-           wkbMultiLineString = lines,
-           wkbPolygon = drawPolygonGeom,
-           wkbMultiPolygon = drawPolygonGeom,
+    switch(RGDAL_OGR_G_GetGeometryType(geom@handle),
+           POINT = points,
+           MULTIPOINT = points,
+           LINESTRING = lines,
+           MULTILINESTRING = lines,
+           POLYGON = drawPolygonGeom,
+           MULTIPOLYGON = drawPolygonGeom,
            lines)
 }
 

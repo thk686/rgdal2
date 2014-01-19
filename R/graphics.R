@@ -23,20 +23,21 @@
 geometryGrob = function(object, ..., units = "native")
 {
     points = getPoints(object)
+    if ( length(unlist(points)) == 0 ) return(grob())
     switch(RGDAL_OGR_G_GetGeometryType(object@handle),
-           wkbPoint = pointsGrob(points$x, points$y, default.units = units, ...),
-           wkbLinearRing = polylineGrob(points$x, points$y, default.units = units, ...),
-           wkbLineString = linesGrob(points$x, points$y, default.units = units, ...),
-           wkbMultiLineString = multiLineGrob(points, default.units = units, ...),
-           wkbPolygon = polygonGrob(points$x, points$y, default.units = units, ...),
-           wkbMultiPolygon = multiPolygonGrob(points, default.units = units, ...),
-           wkbPoint25D = pointsGrob(points$x, points$y, default.units = units, ...),
-           wkbLineString25D = linesGrob(points$x, points$y, default.units = units, ...),
-           wkbMultiLineString25D = multiLineGrob(points, default.units = units, ...),
-           wkbPolygon25D = polygonGrob(points$x, points$y, default.units = units, ...),
-           wkbMultiPolygon25D = multiPolygonGrob(points, default.units = units, ...),
-           wkbMultiPoint = pointsGrob(points$x, points$y, default.units = units, ...),
-           wkbMultiPoint25D = pointsGrob(points$x, points$y, default.units = units, ...),
+           POINT = pointsGrob(points$x, points$y, default.units = units, ...),
+           LINEARRING = polylineGrob(points$x, points$y, default.units = units, ...),
+           LINESTRING = linesGrob(points$x, points$y, default.units = units, ...),
+           MULTILINESTRING = multiLineGrob(points, default.units = units, ...),
+           POLYGON = multiPolygonGrob(points$x, points$y, default.units = units, ...),
+           MULTIPOLYGON = multiPolygonGrob(points, default.units = units, ...),
+           POINT25D = pointsGrob(points$x, points$y, default.units = units, ...),
+           LINESTRING25D = linesGrob(points$x, points$y, default.units = units, ...),
+           MULTILINESTRING25D = multiLineGrob(points, default.units = units, ...),
+           POLYGON25D = multiPolygonGrob(points$x, points$y, default.units = units, ...),
+           MULTIPOLYGON25D = multiPolygonGrob(points, default.units = units, ...),
+           MULTIPOINT = pointsGrob(points$x, points$y, default.units = units, ...),
+           MULTIPOINT25D = pointsGrob(points$x, points$y, default.units = units, ...),
            stop("Conversion to grid object not implemented"))
 }
 
@@ -122,6 +123,15 @@ function(object, ..., dpi = 100, region = extent(object), overlay = FALSE, recor
     invisible(object)
 })
 
+#' Set the grid viewport
+#' 
+#' Uses the \code{\link{exteint}} of a spatial object to
+#' set the viewport.
+#' 
+#' @param object
+#' @param recording if true, grid will record a copy of the grob
+#' 
+#' @export
 setViewport = function(object, ..., recording = TRUE)
 {
     pushViewport(extentViewport(object, ...), recording = recording)   
@@ -218,6 +228,13 @@ rasterDatasetGrob = function(object,
     rasterGrob(rast, width = width, height = height, default.units = units, ...)
 }
 
+#' Pick an extent object
+#' 
+#' Create an extent geometry by clicking on the plot area
+#' 
+#' @param object if not null, assing the output the object's spatial reference system
+#' @param plot.it if true, overlay the extent on the current plot
+#' 
 #' @export
 pickExtent = function(object = NULL, plot.it = TRUE)
 {

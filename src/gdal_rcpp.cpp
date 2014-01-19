@@ -518,7 +518,7 @@ SEXP RGDAL_OSRNewSpatialReference(const char* srss)
 }
 
 // [[Rcpp::export]]
-int OSRSetFromUserInput(SEXP srs, const char* def)
+int RGDAL_OSRSetFromUserInput(SEXP srs, const char* def)
 {
   OGRSpatialReferenceH h = unwrapHandle<OGRSpatialReference>(srs);
   return OSRSetFromUserInput(h, def);
@@ -587,11 +587,13 @@ void RGDAL_OGR_L_ResetReading(SEXP lyr)
 }
 
 // [[Rcpp::export]]
-SEXP OGR_L_GetSpatialRef(SEXP lyr)
+SEXP RGDAL_OGR_L_GetSpatialRef(SEXP lyr)
 {
   OGRLayerH h = unwrapHandle<OGRLayer>(lyr);
   OGRSpatialReferenceH res = OGR_L_GetSpatialRef(h);
-  return wrapHandle<OGRSpatialReference>(res);
+  return res ?
+    wrapHandle<OGRSpatialReference>(res) :
+    R_NilValue;
 }
 
 // [[Rcpp::export]]
@@ -795,44 +797,33 @@ SEXP OGR_F_GetGeometryRef(SEXP feat)
 }
 
 // [[Rcpp::export]]
-const char* RGDAL_OGR_G_GetGeometryType(SEXP geom)
+std::string RGDAL_OGR_G_GetGeometryType(SEXP geom)
 {
   OGRGeometryH hG = unwrapHandle<OGRGeometry>(geom);
-  switch ( OGR_G_GetGeometryType(hG) )
-  {
-    case wkbPoint:
-      return "wkbPoint";
-    case wkbLineString:
-      return "wkbLineString";
-    case wkbPolygon:
-      return "wkbPolygon";
-    case wkbMultiPoint:
-      return "wkbMultiPoint";
-    case wkbMultiLineString:
-      return "wkbMultiLineString";
-    case wkbMultiPolygon:
-      return "wkbMultiPolygon";
-    case wkbGeometryCollection:
-      return "wkbGeometryCollection";
-    case wkbLinearRing:
-      return "wkbLinearRing";
-    case wkbPoint25D:
-      return "wkbPoint25D";
-    case wkbLineString25D:
-      return "wkbLineString25D";
-    case wkbPolygon25D:
-      return "wkbPolygon25D";
-    case wkbMultiPoint25D:
-      return "wkbMultiPoint25D";
-    case wkbMultiLineString25D:
-      return "wkbMultiLineString25D";
-    case wkbMultiPolygon25D:
-      return "wkbMultiPolygon25D";
-    case wkbGeometryCollection25D:
-      return "wkbGeometryCollection25D";
-    default:
-      return "Unknown geometry type";
-  }
+  return std::string(OGR_G_GetGeometryName(hG));  // needs to copy
+}
+
+static OGRwkbGeometryType typeFromName(std::string name)
+{
+  std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+  if ( name == "unknown" ) return wkbUnknown;   
+  if ( name == "point" ) return wkbPoint;
+  if ( name == "linestring") return wkbLineString;
+  if ( name == "polygon" ) return wkbPolygon;
+  if ( name == "multipoint") return wkbMultiPoint;
+  if ( name == "multilinestring" ) return wkbMultiLineString;
+  if ( name == "multipolygon" ) return wkbMultiPolygon;
+  if ( name == "geometrycollection") return wkbGeometryCollection;
+  if ( name == "none" ) return wkbNone;
+  if ( name == "linearring" ) return wkbLinearRing;
+  if ( name == "point25d") return wkbPoint25D;	
+  if ( name == "linestring25d" ) return wkbLineString25D;
+  if ( name == "polygon25d" ) return wkbPolygon25D;
+  if ( name == "multipoint25d" ) return wkbMultiPoint25D;
+  if ( name == "multilinestring25d" ) return wkbMultiLineString25D;
+  if ( name == "multipolgon25d" ) return wkbMultiPolygon25D;
+  if ( name == "geometrycollection25d" ) return wkbGeometryCollection25D;	
+  stop("Invalid geometry type\n");
 }
 
 // [[Rcpp::export]]
@@ -941,3 +932,68 @@ SEXP RGDAL_GetGeometries(SEXP lyr)
     UNPROTECT(n + 1);
     return res;
 }
+
+// [[Rcpp::export]]
+SEXP RGDAL_OGR_G_CreateGeometry(const char* gtype)
+{
+  OGRwkbGeometryType t = typeFromName(gtype);
+  OGRGeometryH res = OGR_G_CreateGeometry(t);
+  return wrapHandle<OGRGeometry>(res);
+}
+
+// [[Rcpp::export]]
+int RGDAL_OGR_DS_TestCapability(SEXP ds, const char* which)
+{
+  OGRDataSourceH h = unwrapHandle<OGRDataSource>(ds);
+  return OGR_DS_TestCapability(h, which);
+}
+
+// [[Rcpp::export]]
+int RGDAL_OGR_L_TestCapability(SEXP lyr, const char* which)
+{
+  OGRDataSourceH h = unwrapHandle<OGRLayer>(lyr);
+  return OGR_L_TestCapability(h, which);
+}
+
+// [[Rcpp::export]]
+SEXP RGDAL_MakeExtent(double xmin, double xmax, double ymin, double ymax)
+{
+    OGRGeometryH hGeom = OGR_G_CreateGeometry(wkbPolygon),
+                 hRing = OGR_G_CreateGeometry(wkbLinearRing);
+    
+    OGR_G_AddPoint_2D(hRing, xmin, ymin);
+    OGR_G_AddPoint_2D(hRing, xmin, ymax);
+    OGR_G_AddPoint_2D(hRing, xmax, ymax);
+    OGR_G_AddPoint_2D(hRing, xmax, ymin);
+    OGR_G_AddPoint_2D(hRing, xmin, ymin);
+    _(OGR_G_AddGeometry(hGeom, hRing));
+    return wrapHandle<OGRGeometry>(hGeom);
+}
+
+// [[Rcpp::export]]
+SEXP RGDAL_OGR_G_GetSpatialReference(SEXP geom)
+{
+  OGRGeometryH h = unwrapHandle<OGRGeometry>(geom);
+  OGRSpatialReferenceH srs = OGR_G_GetSpatialReference(h);
+  return srs ?
+    wrapHandle<OGRSpatialReference>(srs) :
+    R_NilValue;
+}
+
+// [[Rcpp::export]]
+SEXP RGDAL_OSRClone(SEXP srs)
+{
+  OGRSpatialReferenceH h = unwrapHandle<OGRSpatialReference>(srs);
+  OGRSpatialReferenceH res = OSRClone(h);
+  return res ?
+    wrapHandle<OGRSpatialReference>(res) :
+    R_NilValue;
+}
+
+// [[Rcpp::export]]
+const char* RGDAL_GDALGetProjectionRef(SEXP ds)
+{
+  GDALDatasetH h = unwrapHandle<GDALDataset>(ds);
+  return GDALGetProjectionRef(h);
+}
+

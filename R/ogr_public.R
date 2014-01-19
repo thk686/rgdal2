@@ -239,6 +239,23 @@ function(x)
   GetFieldNames(x@handle)
 })
 
+#' Fetch properties of an object
+#' 
+#' Interrogate properties of objects
+#' 
+#' @param object the object
+#' 
+#' @return a list of properties
+#' 
+#' @examples
+#' 
+#' #' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
+#' x = openOGRLayer(f)
+#' properties(x)
+#' 
+#' @aliases properties
+#' @rdname properties
+#' @export
 setMethod("properties", "RGDAL2Layer",
 function(object)
 {
@@ -297,7 +314,8 @@ execSQL = function(x, sql)
     invisible(x)
 }
 
-setMethod('show', 'RGDAL2SQLLayer',
+setMethod('show',
+signature('RGDAL2SQLLayer'),
 function(object)
 {
     ogrinfo = Sys.which('ogrinfo')
@@ -513,15 +531,9 @@ getGeometries = function(x)
 #' @param reset if true, \code{\link{rewind}} the layer
 #' 
 #' @details
-#' Combined with \code{\link{foreach}} and \code{\link{%do%}} the
+#' Combined with \code{\link{foreach}} and \code{\link{do}} the
 #' returned object can be used to iterate over all features in a
 #' data layer.
-#' 
-#' @examples
-#' f = system.file("example-data/tl_2013_us_state.shp", package = "rgdal2")
-#' x = openOGRLayer(f)
-#' area.sum = foreach(i = featureIter(x), .combine = "+") %%do%% i$ALAND
-#' show(area.sum)
 #' 
 #' @export
 featureIter = function(x, reset = TRUE)
@@ -537,6 +549,19 @@ featureIter = function(x, reset = TRUE)
     structure(list(nextElem = f), class = c('rgdal2featureIter', 'abstractiter', 'iter'))
 }
 
+#' Create geometry iterator
+#' 
+#' Generate a geometry iterator for use with \code{\link{foreach}}.
+#' 
+#' @param x a data layer
+#' @param reset if true, \code{\link{rewind}} the layer
+#' 
+#' @details
+#' Combined with \code{\link{foreach}} and \code{\link{do}} the
+#' returned object can be used to iterate over all geometries in a
+#' data layer.
+#' 
+#' @export
 geometryIter = function(x, reset = TRUE)
 {
     assertClass(x, "RGDAL2Layer")
@@ -572,7 +597,8 @@ geometryIter = function(x, reset = TRUE)
 #' @aliases as-data-frame
 #' @family layer-io
 #' @export
-setAs('RGDAL2Layer', 'data.frame',
+setAs('RGDAL2Layer',
+signature('data.frame'),
 function(from)
 {
     res = foreach(i = featureIter(from),
@@ -631,7 +657,8 @@ print.RGDAL2LayerDF = function(x, ...)
 #' @aliases extent
 #' @rdname extent
 #' @export
-setMethod("extent", "RGDAL2Layer",
+setMethod("extent", 
+signature("RGDAL2Layer"),
 function(object)
 {
     sf = getSpatialFilter(object)
@@ -642,6 +669,20 @@ function(object)
     res
 })
 
+#' Set a spatial filter on a data layer
+#' 
+#' Constrains the data layer by the geometry
+#' 
+#' @param layer a data layer
+#' @param geom a geometry
+#' 
+#' @details
+#' This should in principle cause \code{\link{getGeometries}} to only
+#' return those that overlap the filter geometry. Its not clear to me
+#' that this actually works.
+#' 
+#' @rdname spatial-filter
+#' @export
 setSpatialFilter = function(layer, geom)
 {
     assertClass(layer, "RGDAL2Layer")
@@ -657,6 +698,8 @@ setSpatialFilter = function(layer, geom)
     invisible(layer)
 }
 
+#' @rdname spatial-filter
+#' @export
 getSpatialFilter = function(layer)
 {
     assertClass(layer, "RGDAL2Layer")
@@ -664,6 +707,9 @@ getSpatialFilter = function(layer)
     newRGDAL2Geometry(res)
 }
 
+#' @param where an SQL where statement
+#' @rdname spatial-filter
+#' @export
 setSelectWhere = function(layer, where)
 {
     assertClass(layer, "RGDAL2Layer")
@@ -706,6 +752,13 @@ getFields = function(x)
     RGDAL_GetFields(x@handle)
 }
 
+#' Get a feture ID
+#' 
+#' Returns the ID of a feature
+#' 
+#' @param x the feature object
+#' 
+#' @export
 getID = function(x)
 {
     assertClass(x, "RGDAL2Feature")
@@ -726,7 +779,14 @@ getGeometry = function(x)
     newRGDAL2LayerGeometry(geom, x@layer)
 }
 
-setMethod("getSRS", "RGDAL2Feature",
+#' Get the spatial reference system from a feature
+#' 
+#' @param object the object holding the SRS
+#' 
+#' @rdname srs
+#' @export
+setMethod("getSRS",
+signature("RGDAL2Feature"),
 function(object)
 {
     getSRS(object@layer)
@@ -735,9 +795,22 @@ function(object)
 #
 # Functions for geometries
 #
+
+#' Create a geometry
+#' 
+#' Creates a geometry object optionally setting the spatial reference system
+#' 
+#' @param geomType the name of the geometry type
+#' @param points an x, y point list
+#' @param SRS a spatial reference system object
+#' 
+#' @examples
+#' newGeometry("POINT", list(x = rnorm(3), y = rnorm(3)))
+#' 
+#' @export
 newGeometry = function(geomType, points = NULL, SRS = NULL)
 {
-    res = OGR_G_CreateGeometry(geomType)
+    res = RGDAL_OGR_G_CreateGeometry(geomType)
     res = newRGDAL2Geometry(res)
     if ( ! is.null(points) )
         addPoints(res, points)
@@ -777,16 +850,16 @@ getPoints = function(x, collapse = FALSE)
 addPoints = function(x, points)
 {
     assertClass(x, "RGDAL2Geometry")
-    switch(OGR_G_GetGeometryType(x@handle),
-           wkbPoint = addPointsFromList(x, points),
-           wkbLinearRing = addPointsFromList(x, points),
-           wkbLineString = addPointsFromList(x, points),
-           wkbPolygon = addRingsFromList(x, points),
-           wkbPoint25D = addPointsFromList(x, points),
-           wkbLineString25D = addPointsFromList(x, points),
-           wkbPolygon25D = addRingsFromList(x, points),
-           wkbMultiPoint = accumPointsFromList(x, points),
-           wkbMultiPoint25D = accumPointsFromList(x, points),
+    switch(RGDAL_OGR_G_GetGeometryType(x@handle),
+           POINT = addPointsFromList(x, points),
+           LINEARRING = addPointsFromList(x, points),
+           LINESTRING = addPointsFromList(x, points),
+           POLYGON = addRingsFromList(x, points),
+           POINT25D = addPointsFromList(x, points),
+           LINESTRING25D = addPointsFromList(x, points),
+           POLYGON25D = addRingsFromList(x, points),
+           MULTIPOINT = accumPointsFromList(x, points),
+           MULTIPOINT25D = accumPointsFromList(x, points),
            stop("Cannot add points to this geometry type"))
     invisible(x)
 }
@@ -836,15 +909,20 @@ function(object)
 # Spatial predicates and geometry functions
 #
 
-centroid = function(x)
-{
-    assertClass(x, "RGDAL2Geometry")
-    res = newGeometry("wkbPoint")
-    if ( OGR_G_Centroid(x@handle, res@handle) )
-        stop("Error computing centroid")
-    res
-}
-
+#' Binary geometry functions
+#' 
+#' Infix operators for binary geometry functions
+#' 
+#' @details
+#' These mirror the equivalent functions in OGR. See
+#' \url{http://www.gdal.org/} for more information.
+#' 
+#' @param lhs a geometry object
+#' @param rhs a geometry object
+#' 
+#' @aliases geometry-binary
+#' @rdname geometry-binary
+#' @export
 '%intersects%' = function(lhs, rhs)
 {
     assertClass(lhs, 'RGDAL2Geometry')
@@ -852,6 +930,8 @@ centroid = function(x)
     OGR_G_Intersects(lhs@handle, rhs@handle) == 1;
 }
 
+#' @rdname geometry-binary
+#' @export
 '%equals%' = function(lhs, rhs)
 {
     assertClass(lhs, 'RGDAL2Geometry')
@@ -859,6 +939,8 @@ centroid = function(x)
     OGR_G_Equals(lhs@handle, rhs@handle) == 1
 }
 
+#' @rdname geometry-binary
+#' @export
 '%disjoint%' = function(lhs, rhs)
 {
     assertClass(lhs, 'RGDAL2Geometry')
@@ -866,6 +948,8 @@ centroid = function(x)
     OGR_G_Disjoint(lhs@handle, rhs@handle) == 1
 }
 
+#' @rdname geometry-binary
+#' @export
 '%touches%' = function(lhs, rhs)
 {
     assertClass(lhs, 'RGDAL2Geometry')
@@ -873,6 +957,8 @@ centroid = function(x)
     OGR_G_Touches(lhs@handle, rhs@handle) == 1
 }
 
+#' @rdname geometry-binary
+#' @export
 '%crosses%' = function(lhs, rhs)
 {
     assertClass(lhs, 'RGDAL2Geometry')
@@ -880,6 +966,8 @@ centroid = function(x)
     OGR_G_Crosses(lhs@handle, rhs@handle) == 1
 }
 
+#' @rdname geometry-binary
+#' @export
 '%within%' = function(lhs, rhs)
 {
     assertClass(lhs, 'RGDAL2Geometry')
@@ -887,6 +975,8 @@ centroid = function(x)
     OGR_G_Within(lhs@handle, rhs@handle) == 1
 }
 
+#' @rdname geometry-binary
+#' @export
 '%contains%' = function(lhs, rhs)
 {
     assertClass(lhs, 'RGDAL2Geometry')
@@ -894,6 +984,8 @@ centroid = function(x)
     OGR_G_Contains(lhs@handle, rhs@handle) == 1
 }
 
+#' @rdname geometry-binary
+#' @export
 '%overlaps%' = function(lhs, rhs)
 {
     assertClass(lhs, 'RGDAL2Geometry')
@@ -901,6 +993,8 @@ centroid = function(x)
     OGR_G_Overlaps(lhs@handle, rhs@handle) == 1
 }
 
+#' @rdname geometry-binary
+#' @export
 '%intersection%' = function(lhs, rhs)
 {
     assertClass(lhs, 'RGDAL2Geometry')
@@ -909,6 +1003,8 @@ centroid = function(x)
     newRGDAL2Geometry(handle = x)
 }
 
+#' @rdname geometry-binary
+#' @export
 '%union%' = function(lhs, rhs)
 {
     assertClass(lhs, 'RGDAL2Geometry')
@@ -917,6 +1013,8 @@ centroid = function(x)
     newRGDAL2Geometry(x)
 }
 
+#' @rdname geometry-binary
+#' @export
 '%difference%' = function(lhs, rhs)
 {
     assertClass(lhs, 'RGDAL2Geometry')
@@ -925,6 +1023,8 @@ centroid = function(x)
     newRGDAL2Geometry(x)
 }
 
+#' @rdname geometry-binary
+#' @export
 '%symdiff%' = function(lhs, rhs)
 {
     assertClass(lhs, 'RGDAL2Geometry')
@@ -933,6 +1033,8 @@ centroid = function(x)
     newRGDAL2Geometry(x)
 }
 
+#' @rdname geometry-binary
+#' @export
 '%distance%' = function(lhs, rhs)
 {
     assertClass(lhs, 'RGDAL2Geometry')
@@ -940,69 +1042,75 @@ centroid = function(x)
     OGR_G_Distance(lhs@handle, rhs@handle)
 }
 
-boundary = function(x)
+#' Unary geometry functions
+#' 
+#' These function operate on geometries.
+#' 
+#' @param object a geometry object
+#' 
+#' @details
+#' These mirror the equivalent functions in OGR. See
+#' \url{http://www.gdal.org/} for more information.
+#' 
+#' @aliases geometry-unary
+#' @rdname geometry-unary
+#' @export
+centroid = function(object)
 {
-    assertClass(x, "RGDAL2Geometry")
-    res = OGR_G_Boundary(x@handle)
+  assertClass(object, "RGDAL2Geometry")
+  res = newGeometry("wkbPoint")
+  if ( OGR_G_Centroid(object@handle, res@handle) )
+    stop("Error computing centroid")
+  res
+}
+
+#' @rdname geometry-unary
+#' @export
+boundary = function(object)
+{
+    assertClass(object, "RGDAL2Geometry")
+    res = OGR_G_Boundary(object@handle)
     newRGDAL2Geometry(res)
 }
 
-convexHull = function(x)
+#' @rdname geometry-unary
+#' @export
+convexHull = function(object)
 {
-    assertClass(x, "RGDAL2Geometry")
-    res = OGR_G_ConvexHull(x@handle)
+    assertClass(object, "RGDAL2Geometry")
+    res = OGR_G_ConvexHull(object@handle)
     newRGDAL2Geometry(res)
 }
 
-unionCascaded = function(x)
+#' @rdname geometry-unary
+#' @export
+unionCascaded = function(object)
 {
-    assertClass(x, "RGDAL2Geometry")
-    res = OGR_G_UnionCascaded(x@handle)
+    assertClass(object, "RGDAL2Geometry")
+    res = OGR_G_UnionCascaded(object@handle)
     newRGDAL2Geometry(res)
 }
 
-lineLength = function(x)
+#' @rdname geometry-unary
+#' @export
+lineLength = function(object)
 {
-    assertClass(x, "RGDAL2Geometry")
-    OGR_G_Length(x@handle)
+    assertClass(object, "RGDAL2Geometry")
+    OGR_G_Length(object@handle)
 }
 
-area = function(x)
+#' @rdname geometry-unary
+#' @export
+area = function(object)
 {
-    assertClass(x, "RGDAL2Geometry")
-    OGR_G_Area(x@handle)
+    assertClass(object, "RGDAL2Geometry")
+    OGR_G_Area(object@handle)
 }
 
-#
-# Misc functions
-#
-setMethod("extent", "list",
-function(object)
-{
-    if ( isPointList(object) )
-    {
-      xmin = min(object$x)
-      xmax = max(object$x)
-      ymin = min(object$x)
-      ymax = max(object$x)
-      res = newGeometry('wkbPolygon')
-      addPoints(res, list(x = c(xmin, xmin, xmax, xmax),
-                          y = c(ymin, ymax, ymax, ymin)))
-      res = newRGDAL2Geometry(res)
-      return(res)
-    }
-    else
-      lapply(object, function(el) extent(el))
-})
-
-makeExtent = function(xmin = 0, xmax = 1, ymin = 0, ymax = 1, SRS = NULL)
-{
-    res = RGDAL_MakeExtent(xmin, xmax, ymin, ymax)
-    res = newRGDAL2Geometry(res)
-    if ( !is.null(SRS) ) setSRS(res, SRS)
-    res
-}
-
+#' @param tolerance larger values increase simplification
+#' @param perserve.topology if true, attempt to not invalidate the geometry
+#' @rdname geometry-unary
+#' @export
 simplify = function(object, tolerance, preserve.topology = TRUE)
 {
     assertClass(object, "RGDAL2Geometry")
@@ -1015,6 +1123,8 @@ simplify = function(object, tolerance, preserve.topology = TRUE)
    res
 }
 
+#' @rdname geometry-unary
+#' @export
 polygonize = function(object)
 {
     assertClass(object, "RGDAL2Geometry")
@@ -1024,6 +1134,51 @@ polygonize = function(object)
         setSRS(res, getSRS(object))
     res
 }
+
+#' Generate an extent object
+#' 
+#' Create an extent based on input boundaries
+#' 
+#' @param xmin left side
+#' @param xmas right side
+#' @param ymin bottom
+#' @param ymax top
+#' @param SRS a spatial reference system
+#' 
+#' @return a rectanglular polygon geometry
+#' 
+#' @examples
+#' show(makeExtent())
+#' 
+#' @export
+makeExtent = function(xmin = 0, xmax = 1, ymin = 0, ymax = 1, SRS = NULL)
+{
+  res = RGDAL_MakeExtent(xmin, xmax, ymin, ymax)
+  res = newRGDAL2Geometry(res)
+  if ( !is.null(SRS) ) setSRS(res, SRS)
+  res
+}
+
+#' @export
+setMethod("extent",
+          signature("list"),
+          function(object)
+          {
+            if ( isPointList(object) )
+            {
+              xmin = min(object$x)
+              xmax = max(object$x)
+              ymin = min(object$x)
+              ymax = max(object$x)
+              res = newGeometry('POLYGON')
+              addPoints(res, list(x = c(xmin, xmin, xmax, xmax),
+                                  y = c(ymin, ymax, ymax, ymin)))
+              res = newRGDAL2Geometry(res)
+              return(res)
+            }
+            else
+              lapply(object, function(el) extent(el))
+          })
 
 hexGrid = function(object)
 {

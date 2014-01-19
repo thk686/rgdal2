@@ -12,7 +12,6 @@ newRGDAL2SpatialRef = function(handle)
     new("RGDAL2SpatialRef", handle = handle)
 }
 
-#' @export
 setMethod("show", "RGDAL2SpatialRef", function(object)
 {
     if ( isEmptySRS(object) )
@@ -55,7 +54,7 @@ newSRS = function(defn = "WGS84")
 {
     defn = getProj4FromAlias(defn)
     x = RGDAL_OSRNewSpatialReference("")
-    if ( OSRSetFromUserInput(x, defn) )
+    if ( RGDAL_OSRSetFromUserInput(x, defn) )
         stop('Invalid SRS description')
     newRGDAL2SpatialRef(x)
 }
@@ -68,7 +67,7 @@ getWKT = function(x)
 
 getPROJ4 = function(x)
 {
-    stopifnot(inherits(x, "RGDAL2SpatialRef"))
+    assertClass(x, "RGDAL2SpatialRef")
     RGDAL_GetPROJ4(x@handle)
 }
 
@@ -91,16 +90,18 @@ getPROJ4 = function(x)
 #' @aliases getSRS setSRS
 #' @rdname get-set-srs
 #' @export
-setMethod('getSRS', 'RGDAL2Dataset',
+setMethod('getSRS',
+signature('RGDAL2Dataset'),
 function(object)
 {
-    wktdef = GDALGetProjectionRef(object@handle)
+    wktdef = RGDAL_GDALGetProjectionRef(object@handle)
     newSRS(wktdef)
 })
 
 #' @rdname get-set-srs
 #' @export
-setMethod('getSRS', 'RGDAL2RasterBand',
+setMethod('getSRS',
+signature('RGDAL2RasterBand'),
 function(object)
 {
     getSRS(object@dataset)
@@ -108,27 +109,33 @@ function(object)
 
 #' @rdname get-set-srs
 #' @export
-setMethod("getSRS", "RGDAL2Geometry",
+setMethod("getSRS",
+signature("RGDAL2Geometry"),
 function(object)
 {
-    x = OGR_G_GetSpatialReference(object@handle)
-    if ( isNullPtr(x) ) NULL
-    else newRGDAL2SpatialRef(OSRClone(x))
+    x = RGDAL_OGR_G_GetSpatialReference(object@handle)
+    if ( is.null(x) ) NULL
+    else newRGDAL2SpatialRef(RGDAL_OSRClone(x))
 })
 
 #' @rdname get-set-srs
 #' @export
-setMethod("getSRS", "RGDAL2LayerGeometry", function(object)
+setMethod("getSRS",
+signature("RGDAL2LayerGeometry"),
+function(object)
 {
     getSRS(object@layer)
 })
 
 #' @rdname get-set-srs
 #' @export
-setMethod("getSRS", "RGDAL2Layer", function(object)
+setMethod("getSRS",
+signature("RGDAL2Layer"),
+function(object)
 {
-    x = OGR_L_GetSpatialRef(object@handle)
-    newRGDAL2SpatialRef(OSRClone(x))
+    x = RGDAL_OGR_L_GetSpatialRef(object@handle)
+    if ( is.null(x) ) NULL
+    else newRGDAL2SpatialRef(OSRClone(x))
 })
 
 #' @aliases setSRS
@@ -136,8 +143,8 @@ setMethod("getSRS", "RGDAL2Layer", function(object)
 #' @rdname get-set-srs
 #' @export
 setMethod("setSRS",
-          signature(object = "RGDAL2Geometry", SRS = "RGDAL2SpatialRef"),
-          function(object, SRS)
+signature(object = "RGDAL2Geometry", SRS = "RGDAL2SpatialRef"),
+function(object, SRS)
 {
     OGR_G_AssignSpatialReference(object@handle, SRS@handle)
     invisible(object)
@@ -146,8 +153,8 @@ setMethod("setSRS",
 #' @rdname get-set-srs
 #' @export
 setMethod("setSRS",
-          signature(object = "RGDAL2LayerGeometry", SRS = "RGDAL2SpatialRef"),
-          function(object, SRS)
+signature(object = "RGDAL2LayerGeometry", SRS = "RGDAL2SpatialRef"),
+function(object, SRS)
 {
     warning("Cannot set SRS on geometry owned by layer")
     invisible(object)
@@ -156,8 +163,8 @@ setMethod("setSRS",
 #' @rdname get-set-srs
 #' @export
 setMethod("setSRS",
-          signature(object = "RGDAL2Geometry", SRS = "numeric"),
-          function(object, SRS)
+signature(object = "RGDAL2Geometry", SRS = "numeric"),
+function(object, SRS)
 {
     setSRS(object, newSRS(paste0("EPSG", SRS, sep = ":")))
 })
@@ -165,8 +172,8 @@ setMethod("setSRS",
 #' @rdname get-set-srs
 #' @export
 setMethod("setSRS",
-          signature(object = "RGDAL2Geometry", SRS = "character"),
-          function(object, SRS)
+signature(object = "RGDAL2Geometry", SRS = "character"),
+function(object, SRS)
 {
     srs = newSRS(SRS)
     setSRS(object, srs)
@@ -175,8 +182,8 @@ setMethod("setSRS",
 #' @rdname get-set-srs
 #' @export
 setMethod("setSRS",
-          signature(object = "RGDAL2Dataset", SRS = "RGDAL2SpatialRef"),
-          function(object, SRS)
+signature(object = "RGDAL2Dataset", SRS = "RGDAL2SpatialRef"),
+function(object, SRS)
 {
     if ( GDALSetProjection(object@handle, getWKT(SRS)) )
         warning("Error setting projection")
@@ -186,8 +193,8 @@ setMethod("setSRS",
 #' @rdname get-set-srs
 #' @export
 setMethod("setSRS",
-          signature(object = "RGDAL2RasterBand", SRS = "RGDAL2SpatialRef"),
-          function(object, SRS)
+signature(object = "RGDAL2RasterBand", SRS = "RGDAL2SpatialRef"),
+function(object, SRS)
 {
     if ( GDALSetProjection(object@dataset@handle, getWKT(SRS)) )
         warning("Error setting projection")
@@ -201,8 +208,8 @@ setMethod("setSRS",
 #' @rdname get-set-srs
 #' @export
 setMethod("setSRS",
-    signature(object = "ANY", SRS = "NULL"),
-    function(object, SRS)
+signature(object = "ANY", SRS = "NULL"),
+function(object, SRS)
 {
     warning("SRS not set; input SRS is NULL")
     object          
@@ -210,8 +217,8 @@ setMethod("setSRS",
 
 #' @export
 setMethod("reproject",
-    signature(object = "RGDAL2Geometry", SRS = "RGDAL2SpatialRef"),
-    function(object, SRS)
+signature(object = "RGDAL2Geometry", SRS = "RGDAL2SpatialRef"),
+function(object, SRS)
 {
     if ( isEmptySRS(SRS) ) return(object)
     if ( hasSRS(object) )
@@ -232,24 +239,24 @@ setMethod("reproject",
 
 #' @export
 setMethod("reproject",
-          signature(object = "RGDAL2Geometry", SRS = "numeric"),
-          function(object, SRS)
+signature(object = "RGDAL2Geometry", SRS = "numeric"),
+function(object, SRS)
 {
     reproject(object, newSRS(paste0("EPSG", SRS, sep = ":")))
 })
 
 #' @export
 setMethod("reproject",
-          signature(object = "RGDAL2Geometry", SRS = "character"),
-          function(object, SRS)
+signature(object = "RGDAL2Geometry", SRS = "character"),
+function(object, SRS)
 {
     reproject(object, newSRS(SRS))
 })
 
 #' @export
 setMethod("reproject",
-          signature(object = "ANY", SRS = "NULL"),
-          function(object, SRS)
+signature(object = "ANY", SRS = "NULL"),
+function(object, SRS)
 {
     warning("Object not reprojected; input SRS is NULL")
     object
