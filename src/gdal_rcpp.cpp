@@ -35,7 +35,7 @@ class OGRFeature;
 //
 // Stop on error (error handler will print message)
 //
-#define _(a) if ((a) != 0) stop("")
+#define _(a) if ((a) != 0) stop(#a)
 
 //
 // Returns errors to R
@@ -115,18 +115,20 @@ bool isNullPtr(SEXP x)
 }
 
 // [[Rcpp::export]]
-const char* GDALGetDescription(SEXP x)
+const char* RGDAL_GDALGetDescription(SEXP x)
 {
   GDALDatasetH h = unwrapHandle<GDALDataset>(x);
   return GDALGetDescription(h);  
 }
 
 // [[Rcpp::export]]
-SEXP GDALGetRasterBand(SEXP x, int n)
+SEXP RGDAL_GDALGetRasterBand(SEXP x, int n)
 {
   GDALDatasetH h = unwrapHandle<GDALDataset>(x);
   GDALRasterBandH b = GDALGetRasterBand(h, n);
-  return wrapHandle<GDALRasterBand>(b);
+  return b ?
+    wrapHandle<GDALRasterBand>(b) :
+    R_NilValue;
 }
 
 // [[Rcpp::export]]
@@ -450,18 +452,28 @@ SEXP RGDAL_GetRasterExtent(SEXP ds)
     OGRGeometryH hGeom = OGR_G_CreateGeometry(wkbPolygon),
                  hRing = OGR_G_CreateGeometry(wkbLinearRing);
     
-    _(GDALGetGeoTransform(hDS, &(transf[0])));
-    GDALApplyGeoTransform(&(transf[0]), xmin, ymin, &geox, &geoy);
-    OGR_G_AddPoint_2D(hRing, geox, geoy);
-    GDALApplyGeoTransform(&(transf[0]), xmin, ymax, &geox, &geoy);
-    OGR_G_AddPoint_2D(hRing, geox, geoy);
-    GDALApplyGeoTransform(&(transf[0]), xmax, ymax, &geox, &geoy);
-    OGR_G_AddPoint_2D(hRing, geox, geoy);
-    GDALApplyGeoTransform(&(transf[0]), xmax, ymin, &geox, &geoy);
-    OGR_G_AddPoint_2D(hRing, geox, geoy);
-    GDALApplyGeoTransform(&(transf[0]), xmin, ymin, &geox, &geoy);
-    OGR_G_AddPoint_2D(hRing, geox, geoy);
-    OGR_G_AddGeometry(hGeom, hRing);
+    if ( GDALGetGeoTransform(hDS, &(transf[0])) )
+    {
+      OGR_G_AddPoint_2D(hRing, xmin, ymin);
+      OGR_G_AddPoint_2D(hRing, xmin, ymax);
+      OGR_G_AddPoint_2D(hRing, xmax, ymax);
+      OGR_G_AddPoint_2D(hRing, xmax, ymin);
+      OGR_G_AddPoint_2D(hRing, xmin, ymin);
+    }
+    else
+    {
+      GDALApplyGeoTransform(&(transf[0]), xmin, ymin, &geox, &geoy);
+      OGR_G_AddPoint_2D(hRing, geox, geoy);
+      GDALApplyGeoTransform(&(transf[0]), xmin, ymax, &geox, &geoy);
+      OGR_G_AddPoint_2D(hRing, geox, geoy);
+      GDALApplyGeoTransform(&(transf[0]), xmax, ymax, &geox, &geoy);
+      OGR_G_AddPoint_2D(hRing, geox, geoy);
+      GDALApplyGeoTransform(&(transf[0]), xmax, ymin, &geox, &geoy);
+      OGR_G_AddPoint_2D(hRing, geox, geoy);
+      GDALApplyGeoTransform(&(transf[0]), xmin, ymin, &geox, &geoy);
+      OGR_G_AddPoint_2D(hRing, geox, geoy);
+    }
+    _(OGR_G_AddGeometry(hGeom, hRing));
     return wrapHandle<OGRGeometry>(hGeom);
 }
 
@@ -995,5 +1007,118 @@ const char* RGDAL_GDALGetProjectionRef(SEXP ds)
 {
   GDALDatasetH h = unwrapHandle<GDALDataset>(ds);
   return GDALGetProjectionRef(h);
+}
+
+// [[Rcpp::export]]
+SEXP RGDAL_ApplyGeoTransform(SEXP ds, SEXP point_list, int inverse)
+{
+    GDALDatasetH hDS = unwrapHandle<GDALDataset>(ds);
+    SEXP xi = PROTECT(VECTOR_ELT(point_list, 0)),
+         yi = PROTECT(VECTOR_ELT(point_list, 1));
+    SEXP res = PROTECT(Rf_allocVector(VECSXP, 2)),
+         x = PROTECT(Rf_allocVector(REALSXP, Rf_length(xi))),
+         y = PROTECT(Rf_allocVector(REALSXP, Rf_length(yi)));
+    double gt[6], igt[6];
+    double* gtrans;
+    GDALGetGeoTransform(hDS, &(gt[0]));
+    if ( inverse )
+    {
+        GDALInvGeoTransform(&(gt[0]), &(igt[0]));
+        gtrans = &(igt[0]);
+    }
+    else
+    {
+        gtrans = &(gt[0]);
+    }
+    for ( size_t i = 0; i != Rf_length(x); ++i )
+        GDALApplyGeoTransform(gtrans, REAL(xi)[i], REAL(yi)[i], &(REAL(x)[i]), &(REAL(y)[i]));
+    SET_VECTOR_ELT(res, 0, x);
+    SET_VECTOR_ELT(res, 1, y);
+    attachNames(res);
+    UNPROTECT(5);
+    return res;
+}
+
+// [[Rcpp::export]]
+SEXP RGDAL_OGR_G_Clone(SEXP geom)
+{
+  OGRGeometryH hGeom = unwrapHandle<OGRGeometry>(geom);
+  OGRGeometryH res = OGR_G_Clone(hGeom);
+  return res ?
+    wrapHandle<OGRGeometry>(res) :
+    R_NilValue;
+}
+
+// [[Rcpp::export]]
+int RGDAL_OGR_G_TransformTo(SEXP geom, SEXP srs)
+{
+  OGRGeometryH g = unwrapHandle<OGRGeometry>(geom);
+  OGRSpatialReferenceH s = unwrapHandle<OGRSpatialReference>(srs);
+  return OGR_G_TransformTo(g, s);
+}
+
+// [[Rcpp::export]]
+SEXP RGDAL_CopySubset(SEXP rb, int xos, int yos, int xsz, int ysz)
+{
+    GDALRasterBandH hRB = unwrapHandle<GDALRasterBand>(rb);
+    GDALDataType dt = GDALGetRasterDataType(hRB);
+    GDALDriverH hD = GDALGetDriverByName("MEM");
+    GDALDatasetH res = GDALCreate(hD, "", xsz, ysz, 1, dt, NULL);
+    GDALRasterBandH band = GDALGetRasterBand(res, 1);
+    void* buf = R_alloc(xsz * ysz, GDALGetDataTypeSize(dt) / 8);
+    _(GDALRasterIO(hRB, GF_Read, xos, yos, xsz, ysz, buf, xsz, ysz, dt, 0, 0));
+    _(GDALRasterIO(band, GF_Write, 0, 0, xsz, ysz, buf, xsz, ysz, dt, 0, 0));
+    int hasNoDataValue;
+    double noDataValue = GDALGetRasterNoDataValue(hRB, &hasNoDataValue);
+    if ( hasNoDataValue ) GDALSetRasterNoDataValue(band, noDataValue);
+    double gt[6];
+    GDALDatasetH hDS = GDALGetBandDataset(hRB);
+    GDALGetGeoTransform(hDS, &(gt[0]));
+    double xos_gt, yos_gt;
+    GDALApplyGeoTransform(&(gt[0]), xos, yos, &xos_gt, &yos_gt);
+    gt[0] = xos_gt; gt[3] = yos_gt;
+    GDALSetGeoTransform(res, &(gt[0]));
+    GDALSetProjection(res, GDALGetProjectionRef(hDS));
+    return wrapHandle<GDALDataset>(res);
+}
+
+// [[Rcpp::export]]
+void RGDALWriteRasterBand(SEXP band, SEXP data,
+                          int nDSXOff, int nDSYOff, int nDSXSize, int nDSYSize)
+{
+    GDALRasterBandH hRB = unwrapHandle<GDALRasterBand>(band);
+    if ( GDALGetRasterAccess(hRB) == GA_ReadOnly )
+        stop("Raster band is read-only\n");
+    void* buf;
+    size_t nr = Rf_nrows(data), nc = Rf_ncols(data), nelem = nr * nc;
+    double scale = 1 / GDALGetRasterScale(hRB, NULL),
+           offset = GDALGetRasterOffset(hRB, NULL);
+    if ( Rf_isInteger(data) )
+    {
+        buf = R_alloc(nelem, sizeof(int));
+        for ( size_t r = 0; r != nr; ++r )
+            for ( size_t c = 0; c != nc; ++c )
+                ((int*)buf)[r * nc + c] = scale * INTEGER(data)[c * nr + r] - offset;
+        GDALRasterIO(hRB, GF_Write,
+                     nDSXOff, nDSYOff,
+                     nDSXSize, nDSYSize,
+                     buf, nc, nr, GDT_Int32,
+                     0, 0);
+        return;
+    }
+    if ( Rf_isReal(data) )
+    {
+        buf = R_alloc(nelem, sizeof(double));
+        for ( size_t r = 0; r != nr; ++r )
+            for ( size_t c = 0; c != nc; ++c )
+                ((double*)buf)[r * nc + c] = scale * REAL(data)[c * nr + r] - offset;
+        GDALRasterIO(hRB, GF_Write,
+                     nDSXOff, nDSYOff,
+                     nDSXSize, nDSYSize,
+                     buf, nc, nr, GDT_Float64,
+                     0, 0);
+        return;
+    }
+    stop("Unsupported data type\n");
 }
 

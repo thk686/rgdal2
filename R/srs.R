@@ -52,11 +52,12 @@ setMethod("show", "RGDAL2SpatialRef", function(object)
 #' @export
 newSRS = function(defn = "WGS84")
 {
-    defn = getProj4FromAlias(defn)
-    x = RGDAL_OSRNewSpatialReference("")
+  defn = getProj4FromAlias(defn)
+  x = RGDAL_OSRNewSpatialReference("")
+  if ( nchar(defn) )
     if ( RGDAL_OSRSetFromUserInput(x, defn) )
-        stop('Invalid SRS description')
-    newRGDAL2SpatialRef(x)
+      stop('Invalid SRS description')
+  newRGDAL2SpatialRef(x)
 }
 
 getWKT = function(x)
@@ -94,8 +95,7 @@ setMethod('getSRS',
 signature('RGDAL2Dataset'),
 function(object)
 {
-    wktdef = RGDAL_GDALGetProjectionRef(object@handle)
-    newSRS(wktdef)
+    newSRS(RGDAL_GDALGetProjectionRef(object@handle))
 })
 
 #' @rdname get-set-srs
@@ -211,7 +211,7 @@ setMethod("setSRS",
 signature(object = "ANY", SRS = "NULL"),
 function(object, SRS)
 {
-    warning("SRS not set; input SRS is NULL")
+    # warning("SRS not set; input SRS is NULL")
     object          
 })
 
@@ -223,8 +223,8 @@ function(object, SRS)
     if ( isEmptySRS(SRS) ) return(object)
     if ( hasSRS(object) )
     {
-        x = OGR_G_Clone(object@handle)
-        if ( OGR_G_TransformTo(x, SRS@handle) )
+        x = RGDAL_OGR_G_Clone(object@handle)
+        if ( RGDAL_OGR_G_TransformTo(x, SRS@handle) )
             stop("Error reprojecting geometry")
         res = newRGDAL2Geometry(x)
         setSRS(res, SRS)

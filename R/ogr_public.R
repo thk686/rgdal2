@@ -592,7 +592,7 @@ geometryIter = function(x, reset = TRUE)
 #' x = openOGRLayer(f)
 #' y = as(x, 'data.frame')
 #' head(y)
-#' 
+#'
 #' @name as
 #' @aliases as-data-frame
 #' @family layer-io

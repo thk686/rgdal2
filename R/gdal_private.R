@@ -115,8 +115,9 @@ region2Indices = function(x, i)
     i = reproject(i, getSRS(x))
     pts = getPoints(extent(i))
     tpts = RGDAL_ApplyGeoTransform(x@dataset@handle, pts, 1L)
-    i = floor(min(tpts$y) + 1):floor(max(tpts$y))
-    j = floor(min(tpts$x) + 1):floor(max(tpts$x))
+    tpts = lapply(tpts, abs)
+    i = floor(min(tpts$y)):floor(max(tpts$y))
+    j = floor(min(tpts$x)):floor(max(tpts$x))
     i = i[i > 0 & i <= dims[1]]
     j = j[j > 0 & j <= dims[2]]
     list(i = i, j = j)

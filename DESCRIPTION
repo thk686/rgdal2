@@ -7,5 +7,12 @@ Author: Tim Keitt
 Maintainer: Tim Keitt <tkeitt@gmail.com>
 Description: Reads and writes GIS data files
 License: MIT
-Depends: Rcpp (>= 0.10.6), methods, grDevices, iterators, foreach, RColorBrewer, grid
+Depends:
+    Rcpp (>= 0.10.6),
+    methods,
+    grDevices,
+    iterators,
+    foreach,
+    RColorBrewer,
+    grid
 LinkingTo: Rcpp

@@ -53,7 +53,7 @@ geometryGrob = function(object, ..., units = "native")
 #' @return the grid graphics object invisibly
 #' 
 #' @examples
-#' f = system.file("example-data/butterfly.jpg", package = "rgdal2")
+#' f = system.file("example-data/bee.jpg", package = "rgdal2")
 #' x = openGDAL(f)
 #' draw(x)
 #'   
@@ -181,14 +181,14 @@ rasterBandGrob = function(object,
 
 rasterDatasetGrob = function(object,
                              dpi = 100,
-                             bands = 1L:3L,
+                             bands = 1L:nband(object),
                              region = extent(object),
                              units = "native",
                              ...)
 {
     object = checkDataset(object)
-    if ( length(bands) == 1 )
-        return(rasterBandGrob(getBand(object, bands)))
+    if ( length(bands) != 3L )
+        return(rasterBandGrob(getBand(object), ...))
     bands = rep(bands, length.out = 3L)
     pts = getPoints(extent(region), collapse = TRUE)
     width = diff(range(pts$x)); height = diff(range(pts$y))
