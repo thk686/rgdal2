@@ -1122,3 +1122,24 @@ void RGDALWriteRasterBand(SEXP band, SEXP data,
     stop("Unsupported data type\n");
 }
 
+// [[Rcpp::export]]
+void RGDAL_OGR_G_AddPoint_2D(SEXP geom, double x, double y)
+{
+  OGRGeometryH h = unwrapHandle<OGRGeometry>(geom);
+  OGR_G_AddPoint_2D(h, x, y);
+}
+
+// [[Rcpp::export]]
+void RGDAL_OGR_G_Segmentize(SEXP geom, double l)
+{
+  OGRGeometryH h = unwrapHandle<OGRGeometry>(geom);
+  OGR_G_Segmentize(h, l);
+}
+
+// [[Rcpp::export]]
+int RGDAL_OGR_G_AddGeometry(SEXP geom1, SEXP geom2)
+{
+  OGRGeometryH h1 = unwrapHandle<OGRGeometry>(geom1),
+               h2 = unwrapHandle<OGRGeometry>(geom2);
+  return OGR_G_AddGeometry(h1, h2);
+}

@@ -40,6 +40,10 @@ openOGR = function(fname, readonly = TRUE)
 #' 
 #' @return an object of class RGDAL2Datasource
 #' 
+#' @examples
+#' x = newOGRDatasource()
+#' show(x)
+#' 
 #' @family ogr-io
 #' @export
 newOGRDatasource = function(driver = "MEM", fname = tempfile())
@@ -82,9 +86,9 @@ function(object)
 #' names(x)
 #' class(x[[1]])
 #' class(x[1])
-#' class(x$"tl_2013_us_state")
+#' class(x$continent)
 #' 
-#' @aliases vector-data-source
+#' @aliases datasource
 #' @rdname data-source-methods
 #' @export
 setMethod('length', "RGDAL2Datasource",
@@ -132,7 +136,8 @@ function(x, name)
     getLayer(x, name)
 })
 
-setMethod("properties", "RGDAL2Datasource",
+setMethod("properties",
+signature("RGDAL2Datasource"),
 function(object)
 {
     list(create.layer = testCapability(object, "create.layer"),
@@ -151,6 +156,7 @@ function(object)
 #' f = system.file("example-data/continents", package = "rgdal2")
 #' x = openOGRLayer(f)
 #' show(x)
+#' draw(x, gp = gpar(fill = "lightblue"))
 #' 
 #' @family ogr-io
 #' @export
@@ -177,7 +183,8 @@ getLayerName = function(x)
     OGR_L_GetName(x@handle)
 }
 
-setMethod('show', 'RGDAL2Layer',
+setMethod('show',
+signature('RGDAL2Layer'),
 function(object)
 {
     ogrinfo = Sys.which('ogrinfo')
@@ -215,7 +222,8 @@ function(object)
 #' @aliases vector-layer
 #' @rdname layer-methods
 #' @export
-setMethod('dim', 'RGDAL2Layer',
+setMethod('dim',
+signature('RGDAL2Layer'),
 function(x)
 {
   rows = RGDAL_OGR_L_GetFeatureCount(x@handle)
@@ -225,7 +233,8 @@ function(x)
 
 #' @rdname layer-methods
 #' @export
-setMethod('length', 'RGDAL2Layer',
+setMethod('length',
+signature('RGDAL2Layer'),
 function(x)
 {
   GetLayerFieldCount(x@handle)
@@ -233,7 +242,8 @@ function(x)
 
 #' @rdname layer-methods
 #' @export
-setMethod('names', 'RGDAL2Layer',
+setMethod('names',
+signature('RGDAL2Layer'),
 function(x)
 {
   GetFieldNames(x@handle)
@@ -248,15 +258,15 @@ function(x)
 #' @return a list of properties
 #' 
 #' @examples
-#' 
-#' #' f = system.file("example-data/continents", package = "rgdal2")
+#' f = system.file("example-data/continents", package = "rgdal2")
 #' x = openOGRLayer(f)
 #' properties(x)
 #' 
 #' @aliases properties
 #' @rdname properties
 #' @export
-setMethod("properties", "RGDAL2Layer",
+setMethod("properties",
+signature("RGDAL2Layer"),
 function(object)
 {
     list(random.read = testCapability(object, "random.read"),
@@ -291,8 +301,11 @@ function(object)
 #' @examples
 #' f = system.file("example-data/continents", package = "rgdal2")
 #' x = openOGR(f)
-#' y = getSQLLayer(x, "select * from tl_2013_us_state where \'NAME\' = \"Texas\"")
+#' y = getSQLLayer(x, "select * from continent where \'CONTINENT\' = \"Australia\"")
 #' show(y)
+#' draw(y, region = getNextGeometry(y))
+#' 
+#' execSQL(x, "select * from continent")  #only for side-effect
 #' 
 #' @family ogr-io
 #' @rdname sql-layer
@@ -365,6 +378,13 @@ rewind = function(x)
 #' identifier or "FID". This function uses the FID as a key into the layer. This function
 #' does not return a geometry. Geometries must be extracted from a feature using
 #' \code{\link{getGeometry}}.
+#' 
+#' @examples
+#' f = system.file("example-data/continents", package = "rgdal2")
+#' x = openOGRLayer(f)
+#' ids = getIDs(x)
+#' f = getFeature(x, ids[[1]])
+#' show(f)
 #' 
 #' @family layer-io
 #' @export
@@ -451,14 +471,24 @@ getIDs = function(x)
     unclass(RGDAL_GetFIDs(x@handle))
 }
 
-#' Apply a function to all features in a layer
+#' OGR apply-like functions
+#' 
+#' Apply a function to all features  or geometries in a layer
 #' 
 #' @parm x a data layer
 #' @parm applyFun a function or string
 #' 
 #' @details
-#' The call signature for is \code{function(feature, ...)}.
+#' The call signature for is \code{function(feature, ...)} or
+#' \code{function(geometry, ...)}.
 #' 
+#' @examples
+#' f = system.file("example-data/continents", package = "rgdal2")
+#' x = openOGRLayer(f)
+#' invisible(lapplyFeatures(x, function(a) show(a)))
+#' invisible(lapplyGeometries(x, function(a) show(a)))
+#' 
+#' @rdname applyfuncs
 #' @export
 lapplyFeatures = function(x, applyFun, ...)
 {
@@ -469,14 +499,7 @@ lapplyFeatures = function(x, applyFun, ...)
     res
 }
 
-#' Apply a function to all geometries in a layer
-#' 
-#' @parm x a data layer
-#' @parm applyFun a function or string
-#' 
-#' @details
-#' The call signature for is \code{function(geometry, ...)}.
-#' 
+#' @rdname applyfuncs
 #' @export
 lapplyGeometries = function(x, applyFun, ...)
 {
@@ -721,7 +744,9 @@ setSelectWhere = function(layer, where)
 #
 # Functions for features
 #
-setMethod("show", "RGDAL2Feature", function(object)
+setMethod("show",
+signature("RGDAL2Feature"),
+function(object)
 {
   file = tempfile()
   on.exit(unlink(file))
@@ -819,7 +844,8 @@ newGeometry = function(geomType, points = NULL, SRS = NULL)
     res
 }
 
-setMethod("show", "RGDAL2Geometry",
+setMethod("show",
+signature("RGDAL2Geometry"),
 function(object)
 {
   file = tempfile()
@@ -869,7 +895,7 @@ addGeometry = function(g1, g2)
     stopifnot(inherits(g1, "RGDAL2Geometry"))
     stopifnot(inherits(g2, "RGDAL2Geometry"))
     stopifnot(length(g2) != 0)
-    if ( OGR_G_AddGeometry(g1@handle, g2@handle) )
+    if ( RGDAL_OGR_G_AddGeometry(g1@handle, g2@handle) )
         stop("Cannot add geometry")
     invisible(g1)
 }

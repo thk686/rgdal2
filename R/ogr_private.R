@@ -185,7 +185,7 @@ addPointsFromList = function(x, points)
         yy = as.double(points$y)
         lapply(seq(along = xx), function(i)
         {
-            OGR_G_AddPoint_2D(x@handle, xx[i], yy[i])
+            RGDAL_OGR_G_AddPoint_2D(x@handle, xx[i], yy[i])
         })
         return(invisible(x))
     }
@@ -207,7 +207,7 @@ addRingToPolygon = function(x, points)
 {
     ring = newGeometry('wkbLinearRing')
     addPointsFromList(ring, points)
-    if ( OGR_G_AddGeometry(x@handle, ring@handle) )
+    if ( RGDAL_OGR_G_AddGeometry(x@handle, ring@handle) )
         stop("Error adding points")
     OGR_G_CloseRings(x@handle)
     invisible(x)

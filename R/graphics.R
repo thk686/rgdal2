@@ -19,6 +19,11 @@
 #' use in creating grid plots. It is more convenient to use \code{\link{draw}}
 #' as that will do the conversion and build the plot.
 #' 
+#' @examples
+#' g = graticule()
+#' gg = geometryGrob(g)
+#' show(gg)
+#' 
 #' @export
 geometryGrob = function(object, ..., units = "native")
 {
@@ -29,12 +34,12 @@ geometryGrob = function(object, ..., units = "native")
            LINEARRING = polylineGrob(points$x, points$y, default.units = units, ...),
            LINESTRING = linesGrob(points$x, points$y, default.units = units, ...),
            MULTILINESTRING = multiLineGrob(points, default.units = units, ...),
-           POLYGON = multiPolygonGrob(points$x, points$y, default.units = units, ...),
+           POLYGON = multiPolygonGrob(points, default.units = units, ...),
            MULTIPOLYGON = multiPolygonGrob(points, default.units = units, ...),
            POINT25D = pointsGrob(points$x, points$y, default.units = units, ...),
            LINESTRING25D = linesGrob(points$x, points$y, default.units = units, ...),
            MULTILINESTRING25D = multiLineGrob(points, default.units = units, ...),
-           POLYGON25D = multiPolygonGrob(points$x, points$y, default.units = units, ...),
+           POLYGON25D = multiPolygonGrob(points, default.units = units, ...),
            MULTIPOLYGON25D = multiPolygonGrob(points, default.units = units, ...),
            MULTIPOINT = pointsGrob(points$x, points$y, default.units = units, ...),
            MULTIPOINT25D = pointsGrob(points$x, points$y, default.units = units, ...),
@@ -125,7 +130,7 @@ function(object, ..., dpi = 100, region = extent(object), overlay = FALSE, recor
 
 #' Set the grid viewport
 #' 
-#' Uses the \code{\link{exteint}} of a spatial object to
+#' Uses the \code{\link{extent}} of a spatial object to
 #' set the viewport.
 #' 
 #' @param object
@@ -189,7 +194,6 @@ rasterDatasetGrob = function(object,
     object = checkDataset(object)
     if ( length(bands) != 3L )
         return(rasterBandGrob(getBand(object), ...))
-    bands = rep(bands, length.out = 3L)
     pts = getPoints(extent(region), collapse = TRUE)
     width = diff(range(pts$x)); height = diff(range(pts$y))
     has.alpha = getMaskFlags(getMask(object))$is.alpha
@@ -271,23 +275,29 @@ current.viewport.aspect = function()
 #' @param dlon the longitude interval in degrees
 #' @param linc the line-segment increment in degrees
 #' 
+#' @examples
+#' f = system.file("example-data/continents", package = "rgdal2")
+#' x = openOGRLayer(f)
+#' draw(graticule())
+#' draw(x, gp = gpar(fill = "lightblue"), overlay = TRUE)
+#' 
 #' @export
 graticule = function(dlat = 10, dlon = 10, linc = 1)
 {
     latlon = newSRS("EPSG:4326")
-    g = newGeometry('wkbMultiLineString', SRS = latlon)
+    g = newGeometry('MULTILINESTRING', SRS = latlon)
     for ( lon in seq(-180, 180, by = dlon) )
     {
         pts = list(x = rep(lon, 2), y = c(-90, 90))
-        gg = newGeometry('wkbLineString', pts, latlon)
-        OGR_G_Segmentize(gg@handle, linc)
+        gg = newGeometry('LINESTRING', pts, latlon)
+        RGDAL_OGR_G_Segmentize(gg@handle, linc)
         addGeometry(g, gg)
     }
     for ( lat in seq(-90, 90, by = dlat) )
     {
         pts = list(x = c(-180, 180), y = rep(lat, 2))
-        gg = newGeometry('wkbLineString', pts, latlon)
-        OGR_G_Segmentize(gg@handle, linc)
+        gg = newGeometry('LINESTRING', pts, latlon)
+        RGDAL_OGR_G_Segmentize(gg@handle, linc)
         addGeometry(g, gg)
     }
     return(g)
