@@ -1187,24 +1187,24 @@ makeExtent = function(xmin = 0, xmax = 1, ymin = 0, ymax = 1, SRS = NULL)
 
 #' @export
 setMethod("extent",
-          signature("list"),
-          function(object)
-          {
-            if ( isPointList(object) )
-            {
-              xmin = min(object$x)
-              xmax = max(object$x)
-              ymin = min(object$x)
-              ymax = max(object$x)
-              res = newGeometry('POLYGON')
-              addPoints(res, list(x = c(xmin, xmin, xmax, xmax),
-                                  y = c(ymin, ymax, ymax, ymin)))
-              res = newRGDAL2Geometry(res)
-              return(res)
-            }
-            else
-              lapply(object, function(el) extent(el))
-          })
+signature("list"),
+function(object)
+{
+  if ( isPointList(object) )
+  {
+    xmin = min(object$x)
+    xmax = max(object$x)
+    ymin = min(object$x)
+    ymax = max(object$x)
+    res = newGeometry('POLYGON')
+    addPoints(res, list(x = c(xmin, xmin, xmax, xmax),
+                        y = c(ymin, ymax, ymax, ymin)))
+    res = newRGDAL2Geometry(res)
+    return(res)
+  }
+  else
+    lapply(object, function(el) extent(el))
+})
 
 hexGrid = function(object)
 {

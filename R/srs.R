@@ -12,7 +12,9 @@ newRGDAL2SpatialRef = function(handle)
     new("RGDAL2SpatialRef", handle = handle)
 }
 
-setMethod("show", "RGDAL2SpatialRef", function(object)
+setMethod("show",
+signature("RGDAL2SpatialRef"),
+function(object)
 {
     if ( isEmptySRS(object) )
         cat("Empty SRS\n")
@@ -215,6 +217,24 @@ function(object, SRS)
     object          
 })
 
+#' Project data to new reference system
+#' 
+#' @param object the object to reproject
+#' @param SRS a spatial reference system descriptor
+#' 
+#' @details
+#' The SRS can be given as an SRS object, a string or number. Numbers will be coverted to an EPSG code.
+#' Strings can be SRS aliases (see \code{\link{newSRS}}) or anything GDAL understands including PROJ4
+#' strings.
+#' 
+#' @examples
+#' g1 = newGeometry("POINT", list(x = 1, y = 1), newSRS("WGS84"))
+#' show(g1)
+#' g2 = reproject(g1, newSRS("Moll"))
+#' show(g2)
+#' 
+#' @aliases reproject-geometry
+#' @rdname reproject
 #' @export
 setMethod("reproject",
 signature(object = "RGDAL2Geometry", SRS = "RGDAL2SpatialRef"),
@@ -237,6 +257,7 @@ function(object, SRS)
     }
 })
 
+#' @rdname reproject
 #' @export
 setMethod("reproject",
 signature(object = "RGDAL2Geometry", SRS = "numeric"),
@@ -245,6 +266,7 @@ function(object, SRS)
     reproject(object, newSRS(paste0("EPSG", SRS, sep = ":")))
 })
 
+#' @rdname reproject
 #' @export
 setMethod("reproject",
 signature(object = "RGDAL2Geometry", SRS = "character"),
@@ -253,6 +275,7 @@ function(object, SRS)
     reproject(object, newSRS(SRS))
 })
 
+#' @rdname reproject
 #' @export
 setMethod("reproject",
 signature(object = "ANY", SRS = "NULL"),
