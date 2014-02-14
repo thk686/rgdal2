@@ -18,7 +18,7 @@
 #' show(x)
 #' draw(x)
 #'
-#' @family gdal-io   
+#' @seealso \code{\link{openGDALBand}}, \code{\link{openOGR}} 
 #' @export
 openGDAL = function(fname, readonly = TRUE, shared = TRUE)
 {
@@ -42,7 +42,8 @@ openGDAL = function(fname, readonly = TRUE, shared = TRUE)
 #' show(x)
 #' draw(x)
 #'
-#' @family gdal-io
+#' @seealso \code{\link{openGDAL}}, \code{\link{openOGR}} 
+#' 
 #' @export
 openGDALBand = function(fname, band = 1L, readonly = TRUE)
 {
@@ -82,7 +83,8 @@ openGDALBand = function(fname, band = 1L, readonly = TRUE)
 #' x = newGDALDataset(100, 100, 3, driver = "GTiff", nosave = TRUE)
 #' show(x); dim(x)
 #'
-#' @family gdal-io   
+#' @seealso \code{\link{openGDALBand}}, \code{\link{openOGR}} 
+#' 
 #' @export
 newGDALDataset = function(nrow, ncol, nbands = 1L,
                           dataType = 'Int32', driver = 'MEM',
@@ -115,7 +117,8 @@ newGDALDataset = function(nrow, ncol, nbands = 1L,
 #' y = copyDataset(x)
 #' show(x); show(y)
 #'
-#' @family gdal-io   
+#' @seealso \code{\link{openGDALBand}}, \code{\link{openOGR}} 
+#' 
 #' @export
 copyDataset = function(x, file = tempfile(), driver = "MEM")
 {
@@ -142,7 +145,8 @@ copyDataset = function(x, file = tempfile(), driver = "MEM")
 #' x = openGDAL(f)
 #' getTransform(x)
 #' 
-#' @family transform
+#' @seealso \code{\link{setTransform}}
+#' 
 #' @export
 getTransform = function(object)
 {
@@ -170,7 +174,8 @@ getTransform = function(object)
 #' setTransform(y, getTransform(x))
 #' getTransform(y)
 #' 
-#' @family transform
+#' @seealso \code{\link{getTransform}}
+#' 
 #' @export
 setTransform = function(object, transform)
 {
@@ -202,7 +207,8 @@ setTransform = function(object, transform)
 #' copyTransform(x, y)
 #' getTransform(y)
 #' 
-#' @family transform
+#' @seealso \code{\link{setTransform}}
+#' 
 #' @export
 copyTransform = function(obj1, obj2)
 {
@@ -295,6 +301,7 @@ getDataset = function(x)
     x@dataset
 }
 
+# This should be rewritten to output a palette
 getColorTable = function(x)
 {
   x = checkBand(x)
@@ -376,26 +383,27 @@ getMaskFlags = function(x)
        is.nodata = bitwAnd(flag, 8L) != 0L)
 }
 
-#' Display information about a dataset
-#' 
-#' @param object a dataset
-#' 
-#' @details
-#' If possible, this function will call and return the output of
-#' the \code{gdalinfo} command. An attempt is made to discover the
-#' number of console lines and truncate the output to fit on the
-#' current console. Otherwise, a simple message is printed along
-#' with the memmory address of the handle.
-#' 
-#' @seealso \code{\link{show}}
-#' 
-#' @examples
-#' f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
-#' x = openGDAL(f)
-#' show(x)
-#'
-#' @aliases show-dataset
-#' @export
+# Display information about a dataset
+# 
+# @param object a dataset
+# 
+# @details
+# If possible, this function will call and return the output of
+# the \code{gdalinfo} command. An attempt is made to discover the
+# number of console lines and truncate the output to fit on the
+# current console. Otherwise, a simple message is printed along
+# with the memmory address of the handle.
+# 
+# @seealso \code{\link{show}}
+# 
+# @examples
+# f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
+# x = openGDAL(f)
+# show(x)
+#
+# @aliases show-dataset
+# @export
+
 setMethod('show',
 signature('RGDAL2Dataset'),
 function(object)
@@ -417,19 +425,20 @@ function(object)
     }
 })
 
-#' Display information about a raster band
-#' 
-#' @param object a raster band
-#' 
-#' @seealso \code{\link{show}}
-#' 
-#' @examples
-#' f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
-#' x = openGDALBand(f)
-#' show(x)
-#'
-#' @aliases show-band
-#' @export
+# Display information about a raster band
+# 
+# @param object a raster band
+# 
+# @seealso \code{\link{show}}
+# 
+# @examples
+# f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
+# x = openGDALBand(f)
+# show(x)
+#
+# @aliases show-band
+# @export 
+
 setMethod('show',
 signature('RGDAL2RasterBand'),
 function(object)
@@ -543,10 +552,7 @@ getBlockSize = function(x)
 #' @param x a raster band
 #' @param i the row indices
 #' @param j the column indicies
-#' @param ii subsampling row indices (see details)
-#' @param jj subsampling column indices (see details)
 #' @param drop if true (default), drop singleton dimensions
-#' @param use.mask if true (default), set invalid data to \code{NA}
 #' 
 #' @details
 #' A raster band emulates an R array. Indexing should operate similarly
@@ -557,6 +563,16 @@ getBlockSize = function(x)
 #' or \code{j} are missing, they assume the values \code{1:nrow(x)} and
 #' \code{1:ncol(x)} respectively.
 #' 
+#' There are several other arguments available that cannot be documented
+#' in the normal way because of the overly pedantic behavior of R CMD check.
+#' These are:
+#' 
+#' \tabular{ll}{
+#' \code{ii} \tab row subsetting indicies \cr
+#' \code{jj} \tab column subsetting indicies \cr
+#' \code{use.mask} \tab if true (default), set invalid data to \code{NA}
+#' }
+#' 
 #' The subsampling indices \code{ii} and \code{jj} can be used to subsample
 #' the extracted data. The output matrix will have \code{length(ii)} rows and
 #' \code{length(jj)} columns. If the number of elements of \code{ii} (\code{jj})
@@ -564,7 +580,7 @@ getBlockSize = function(x)
 #' image will be subsampled by skipping pixel values. If the opposite is true,
 #' pixel values will be duplicated to fill out the returned matrix. Note that
 #' whenever the subsampling indices are applied, the minimum value is subtracted
-#' so that \code{ii = 1:3} is equivalent to \code{ii = 100:103}.
+#' so that \code{ii = 1:3} is equivalent to \code{ii = 101:103}.
 #' 
 #' As a special case, \code{i} may be given as a geometry. The extent of the
 #' geometry will be extracted and used to subset the raster data. The geometry
@@ -649,8 +665,8 @@ function(x, i, j, ..., drop = TRUE)
 #' 
 #' @details
 #' Rather than copying data into R memory, these indexing functions
-#' copy the data to a new dataset Only the minimum value of \code{i} and
-#' \code{j} and thier lengths determine the subset region. If for example
+#' copy the data to a new dataset. Only the minimum value of \code{i} and
+#' \code{j} and their lengths determine the subset region. If for example
 #' you scramble the values of \code{i} using \code{\link{sample}} (without
 #' replacement) you will get the same result. This is a limitation of the
 #' way that GDAL indexes into raster bands.
@@ -663,8 +679,7 @@ function(x, i, j, ..., drop = TRUE)
 #' class(x[[]])
 #' x[[1:2]]
 #' x[[c(1, 3), 4:2]]
-#' x[[ii = 1:3, jj = c(4, 2)]]
-#' x[[i = 1:2, j = 3:2, ii = 1:5, jj = 1:7]]
+#' x[[i = 1:2, j = 3:2]]
 #' e = makeExtent(2, 4, 2, 4)
 #' show(e)
 #' x[[e]]

@@ -6,7 +6,7 @@ Date: 2013-12-30
 Author: Tim Keitt
 Maintainer: Tim Keitt <tkeitt@gmail.com>
 Description: Reads and writes GIS data files
-License: MIT
+License: GPL
 Depends:
     Rcpp (>= 0.10.6),
     methods,
