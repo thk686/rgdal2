@@ -474,7 +474,7 @@ function(x)
 #' 
 #' @examples
 #' f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
-#' x = openGDAL(f)
+#' x = openGDALBand(f)
 #' dim(x)
 #'
 #' @aliases dim-band

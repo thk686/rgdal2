@@ -81,7 +81,7 @@ getPROJ4 = function(x)
 #' @seealso \code{\link{newSRS}}
 #' 
 #' @examples
-#' f = system.file("example-data/gtopo30_vandg.tif", package = "rgdal2")
+#' f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
 #' x = openGDALBand(f)
 #' a = getSRS(x)
 #' show(a)
