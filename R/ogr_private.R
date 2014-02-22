@@ -4,7 +4,7 @@
 
 newRGDAL2Datasource = function(handle)
 {
-    reg.finalizer(handle, OGRReleaseDataSource, TRUE)
+    reg.finalizer(handle, RGDAL_OGRReleaseDataSource, TRUE)
     new("RGDAL2Datasource", handle = handle)
 }
 
@@ -16,7 +16,8 @@ newRGDAL2Layer = function(handle, datasource)
 newRGDAL2SQLLayer = function(handle, datasource, sql)
 {
     if ( is.null(handle) ) return(NULL)
-    f = function(lyrExtPtr) OGR_DS_ReleaseResultSet(datasource@handle, lyrExtPtr)
+    f = function(lyrExtPtr)
+      RGDAL_OGR_DS_ReleaseResultSet(datasource@handle, lyrExtPtr)
     reg.finalizer(handle, f, TRUE)
     new("RGDAL2SQLLayer", handle = handle, datasource = datasource, sql = sql)
 }
@@ -45,9 +46,9 @@ getLayer = function(x, layer = 1L)
 {
     assertClass(x, "RGDAL2Datasource")
     lyr = if ( is.character(layer) )
-            OGR_DS_GetLayerByName(x@handle, layer)
+            RGDAL_OGR_DS_GetLayerByName(x@handle, layer)
           else
-            OGR_DS_GetLayer(x@handle, layer - 1)
+            RGDAL_OGR_DS_GetLayer(x@handle, layer - 1)
     newRGDAL2Layer(lyr, x)
 }
 
@@ -205,11 +206,11 @@ addPointsFromList = function(x, points)
 
 addRingToPolygon = function(x, points)
 {
-    ring = newGeometry('wkbLinearRing')
+    ring = newGeometry('LINEARRING')
     addPointsFromList(ring, points)
     if ( RGDAL_OGR_G_AddGeometry(x@handle, ring@handle) )
         stop("Error adding points")
-    OGR_G_CloseRings(x@handle)
+    RGDAL_OGR_G_CloseRings(x@handle)
     invisible(x)
 }
 

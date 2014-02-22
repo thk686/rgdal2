@@ -22,7 +22,7 @@
 #' @export
 openGDAL = function(fname, readonly = TRUE, shared = TRUE)
 {
-  x = GDALOpen(fname, readonly, shared)
+  x = RGDAL_GDALOpen(fname, readonly, shared)
   newRGDAL2Dataset(x)
 }
 

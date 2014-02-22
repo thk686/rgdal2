@@ -4,7 +4,7 @@
 
 newRGDAL2Dataset = function(handle)
 {
-    reg.finalizer(handle, GDALClose, TRUE)
+    reg.finalizer(handle, RGDAL_Close, TRUE)
     new("RGDAL2Dataset", handle = handle)
 }
 
@@ -39,9 +39,9 @@ readRasterBand = function(x, i, j, ii = i, jj = j, drop = TRUE, use.mask = TRUE)
     nColsOut = diff(range(jj)) + 1L
     res = readRasterData(x@handle, min(j) - 1L, min(i) - 1L, nColsIn, nRowsIn, nColsOut, nRowsOut)
     res = res[ii - min(ii) + 1L, jj - min(jj) + 1L, drop = FALSE]
-    if ( use.mask && bitwAnd(GDALGetMaskFlags(x@handle), 8L) )
+    if ( use.mask && bitwAnd(RGDAL_GDALGetMaskFlags(x@handle), 8L) )
     {
-        mh = GDALGetMaskBand(x@handle)
+        mh = RGDAL_GDALGetMaskBand(x@handle)
         mv = readRasterData(mh, min(j) - 1L, min(i) - 1L, nColsIn, nRowsIn, nColsOut, nRowsOut)
         mv = mv[ii - min(ii) + 1L, jj - min(jj) + 1L, drop = FALSE]
         res[mv == 0] = NA

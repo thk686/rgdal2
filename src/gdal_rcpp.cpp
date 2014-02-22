@@ -4,22 +4,18 @@
 #include <ogr_api.h>
 #include <ogr_srs_api.h>
 #include <cpl_conv.h>
+
 #include <Rcpp.h>
 
 using namespace Rcpp;
 
 //
-// I am trying to stick to the GDAL public interface,
-// so these need to be defined solely to have a type
-// for the XPtr template, and for readability.
+// Stop on error (error handler will print message)
 //
-class GDALDataset;
-class GDALRasterBand;
-class OGRDataSource;
-class OGRLayer;
-class OGRGeometry;
-class OGRSpatialReference;
-class OGRFeature;
+#define _(a) if ((a) != 0) stop(#a)
+
+// Class for autowrapping
+#include "../inst/include/rgdal2.h"
 
 //
 // Kludge until I come up with something better
@@ -31,11 +27,6 @@ class OGRFeature;
 #if SIZEOF_DOUBLE * CHAR_BIT != 64
 #error "Double type must be 64bit"
 #endif
-
-//
-// Stop on error (error handler will print message)
-//
-#define _(a) if ((a) != 0) stop(#a)
 
 //
 // Returns errors to R
@@ -66,22 +57,6 @@ static void __err_handler(CPLErr eErrClass, int err_no, const char *msg)
     return;
 }
 
-template<class T>
-SEXP wrapHandle(void* x)
-{
-  if ( !x ) stop("Function returned null handle\n");
-  return XPtr<T>((T*) x, false);
-}
-
-template<class T>
-void* unwrapHandle(SEXP x)
-{
-  XPtr<T> y(x);
-  void* z = (void*) &*y;
-  if ( !z ) stop("Null handle passed to function\n");
-  return z;
-}
-
 // [[Rcpp::export]]
 void GDALInit()
 {
@@ -91,20 +66,19 @@ void GDALInit()
 }
 
 // [[Rcpp::export]]
-SEXP GDALOpen(const char* file,
-              bool readonly = true,
-              bool shared = true)
+DatasetH RGDAL_GDALOpen(const char* file,
+                    bool readonly = true,
+                    bool shared = true)
 {
   GDALAccess access = readonly ? GA_ReadOnly : GA_Update;
   GDALDatasetH h = shared ? GDALOpenShared(file, access) : GDALOpen(file, access);
-  return wrapHandle<GDALDataset>(h);
+  return DatasetH(h);
 }
 
 // [[Rcpp::export]]
-void GDALClose(SEXP x)
+void RGDAL_Close(DatasetH h)
 {
-  GDALDatasetH h = unwrapHandle<GDALDataset>(x);
-  GDALClose(h);
+  GDALClose(*h);
 }
 
 // [[Rcpp::export]]
@@ -115,55 +89,45 @@ bool isNullPtr(SEXP x)
 }
 
 // [[Rcpp::export]]
-const char* RGDAL_GDALGetDescription(SEXP x)
+const char* RGDAL_GDALGetDescription(DatasetH h)
 {
-  GDALDatasetH h = unwrapHandle<GDALDataset>(x);
-  return GDALGetDescription(h);  
+  return GDALGetDescription(*h);  
 }
 
 // [[Rcpp::export]]
-SEXP RGDAL_GDALGetRasterBand(SEXP x, int n)
+BandH RGDAL_GetRasterBand(DatasetH h, int n)
 {
-  GDALDatasetH h = unwrapHandle<GDALDataset>(x);
-  GDALRasterBandH b = GDALGetRasterBand(h, n);
-  return b ?
-    wrapHandle<GDALRasterBand>(b) :
-    R_NilValue;
+  return GDALGetRasterBand(*h, n);
 }
 
 // [[Rcpp::export]]
-int GDALGetRasterXSize(SEXP x)
+int RGDAL_GetRasterXSize(DatasetH h)
 {
-  GDALDatasetH h = unwrapHandle<GDALDataset>(x);
-  return GDALGetRasterXSize(h);
+  return GDALGetRasterXSize(*h);
 }
 
 // [[Rcpp::export]]
-int GDALGetRasterYSize(SEXP x)
+int RGDAL_GetRasterYSize(DatasetH h)
 {
-  GDALDatasetH h = unwrapHandle<GDALDataset>(x);
-  return GDALGetRasterYSize(h);
+  return GDALGetRasterYSize(*h);
 }
 
 // [[Rcpp::export]]
-int GDALGetRasterCount(SEXP x)
+int RGDAL_GetRasterCount(DatasetH h)
 {
-  GDALDatasetH h = unwrapHandle<GDALDataset>(x);
-  return GDALGetRasterCount(h);
+  return GDALGetRasterCount(*h);
 }
 
 // [[Rcpp::export]]
-int GDALGetRasterBandXSize(SEXP x)
+int RGDAL_GetRasterBandXSize(BandH h)
 {
-  GDALRasterBandH h = unwrapHandle<GDALRasterBand>(x);
-  return GDALGetRasterBandXSize(h);
+  return GDALGetRasterBandXSize(*h);
 }
 
 // [[Rcpp::export]]
-int GDALGetRasterBandYSize(SEXP x)
+int RGDAL_GetRasterBandYSize(BandH h)
 {
-  GDALRasterBandH h = unwrapHandle<GDALRasterBand>(x);
-  return GDALGetRasterBandYSize(h);
+  return GDALGetRasterBandYSize(*h);
 }
 
 // [[Rcpp::export]]
@@ -180,8 +144,8 @@ void RGDAL_CleanupAll()
 }
 
 // [[Rcpp::export]]
-SEXP RGDALCreateDataset(const char* driver, const char* fname,
-                        int nrow, int ncol, int nbands, const char* type)
+DatasetH RGDAL_CreateDataset(const char* driver, const char* fname,
+                             int nrow, int ncol, int nbands, const char* type)
 {
   GDALDataType dtype = GDALGetDataTypeByName(type);
   if ( !dtype ) stop("Unknown data type specified");
@@ -189,74 +153,66 @@ SEXP RGDALCreateDataset(const char* driver, const char* fname,
   if ( !hDR ) stop("Invalid GDAL driver\n");
   GDALDatasetH ds = GDALCreate(hDR, fname, ncol, nrow, nbands, dtype, NULL);
   if ( ds ) GDALFlushCache(ds);
-  return wrapHandle<GDALDataset>(ds);
+  return DatasetH(ds);
 }
 
 // [[Rcpp::export]]
-SEXP RGDAL_CreateCopy(SEXP x, const char* fname, const char* dname)
+DatasetH RGDAL_CreateCopy(DatasetH h, const char* fname, const char* dname)
 {
-    GDALDatasetH h = unwrapHandle<GDALDataset>(x);
     GDALDriverH hD = GDALGetDriverByName(dname);
-    GDALDatasetH res = GDALCreateCopy(hD, fname, h, 0, NULL, NULL, NULL);
-    return wrapHandle<GDALDataset>(res);
+    GDALDatasetH res = GDALCreateCopy(hD, fname, *h, 0, NULL, NULL, NULL);
+    return DatasetH(res);
 }
 
 // [[Rcpp::export]]
-SEXP RGDAL_GetGeoTransform(SEXP x)
+SEXP RGDAL_GetGeoTransform(DatasetH h)
 {
     NumericVector res(6);
-    GDALDatasetH h = unwrapHandle<GDALDataset>(x);
-    _(GDALGetGeoTransform(h, &res[0]));
+    _(GDALGetGeoTransform(*h, &res[0]));
     return res;
 }
 
 // [[Rcpp::export]]
-int RGDAL_SetGeoTransform(SEXP x, SEXP y)
+int RGDAL_SetGeoTransform(DatasetH h, SEXP y)
 {
     NumericVector gt(y);
     if ( gt.size() != 6 ) return 1;
-    GDALDatasetH h = unwrapHandle<GDALDataset>(x); 
-    return GDALSetGeoTransform(h, &gt[0]);
+    return GDALSetGeoTransform(*h, &gt[0]);
 }
 
 // [[Rcpp::export]]
-SEXP GDALGetMaskBand(SEXP x)
+BandH RGDAL_GetMaskBand(BandH h)
 {
-  GDALRasterBandH h = unwrapHandle<GDALRasterBand>(x);
-  GDALRasterBandH res = GDALGetMaskBand(h);
-  return wrapHandle<GDALRasterBandH>(res);
+  return GDALGetMaskBand(*h);
 }
 
 // [[Rcpp::export]]
-int GDALGetMaskFlags(SEXP x)
+int RGDAL_GetMaskFlags(BandH h)
 {
-  GDALRasterBandH h = unwrapHandle<GDALRasterBand>(x);
-  return GDALGetMaskFlags(h);
+  return GDALGetMaskFlags(*h);
 }
 
 // [[Rcpp::export]]
-IntegerVector GDALGetBlockSize(SEXP x)
+IntegerVector RGDAL_GetBlockSize(DatasetH h)
 {
-  GDALDatasetH h = unwrapHandle<GDALDataset>(x);
   IntegerVector res(2);
-  GDALGetBlockSize(h, &res[1], &res[0]);
+  GDALGetBlockSize(*h, &res[1], &res[0]);
   return res;
 }
 
 // [[Rcpp::export]]
-SEXP readRasterData(SEXP rb,
-                    int x, int y,
-                    int xszin, int yszin,
-                    int xszout, int yszout,
-                    int pixsp = 0, int lnsp = 0)
+SEXP RGDAL_readRasterData(BandH h,
+                          int x, int y,
+                          int xszin, int yszin,
+                          int xszout, int yszout,
+                          int pixsp = 0, int lnsp = 0)
 {
-  GDALRasterBandH h = unwrapHandle<GDALRasterBand>(rb);
   NumericVector buf(xszout * yszout);
-  _(GDALRasterIO(h, GF_Read, x, y, xszin, yszin, &buf[0],
-                xszout, yszout, GDT_Float64, pixsp, lnsp));
-  double scale = GDALGetRasterScale(h, NULL), 
-         offset = GDALGetRasterOffset(h, NULL),
-         nodata = GDALGetRasterNoDataValue(h, NULL);
+  _(GDALRasterIO(*h, GF_Read, x, y, xszin, yszin, &buf[0],
+                 xszout, yszout, GDT_Float64, pixsp, lnsp));
+  double scale = GDALGetRasterScale(*h, NULL), 
+         offset = GDALGetRasterOffset(*h, NULL),
+         nodata = GDALGetRasterNoDataValue(*h, NULL);
   NumericMatrix res(yszout, xszout);
   for ( int xx = 0; xx != xszout; ++xx )
     for ( int yy = 0; yy != yszout; ++yy )
@@ -269,17 +225,16 @@ SEXP readRasterData(SEXP rb,
 }
 
 // [[Rcpp::export]]
-int writeRasterData(SEXP rb,
-                    NumericMatrix raster,
-                    int x, int y,
-                    int xszout, int yszout,
-                    int pixsp = 0, int lnsp = 0)
+int RGDAL_writeRasterData(BandH h,
+                          NumericMatrix raster,
+                          int x, int y,
+                          int xszout, int yszout,
+                          int pixsp = 0, int lnsp = 0)
 {
-  GDALDatasetH h = unwrapHandle<GDALRasterBand>(rb);
   int xszin = raster.cols(), yszin = raster.rows();
-  double scale = GDALGetRasterScale(h, NULL), 
-         offset = GDALGetRasterOffset(h, NULL),
-         nodata = GDALGetRasterNoDataValue(h, NULL);
+  double scale = GDALGetRasterScale(*h, NULL), 
+         offset = GDALGetRasterOffset(*h, NULL),
+         nodata = GDALGetRasterNoDataValue(*h, NULL);
   NumericVector buf(xszin * yszin);
   for ( int xx = 0; xx != xszin; ++xx )
     for ( int yy = 0; yy != yszin; ++yy )
@@ -288,26 +243,25 @@ int writeRasterData(SEXP rb,
       buf[yy * xszin + xx] =
         pixv == NA_REAL ? nodata : (pixv - offset) / scale;
     }
-  return GDALRasterIO(h, GF_Write, x, y, xszout, yszout, &buf[0],
+  return GDALRasterIO(*h, GF_Write, x, y, xszout, yszout, &buf[0],
                       xszin, yszin, GDT_Float64, pixsp, lnsp);
 }
 
 // [[Rcpp::export]]
-SEXP RGDAL_ReadBlock(SEXP band, int i, int j)
+SEXP RGDAL_ReadBlock(BandH h, int i, int j)
 {
-    GDALRasterBandH hB = unwrapHandle<GDALRasterBand>(band);
     int xsz, ysz;
-    GDALGetBlockSize(hB, &xsz, &ysz);
-    double scale = GDALGetRasterScale(hB, NULL), 
-           offset = GDALGetRasterOffset(hB, NULL),
-           nodata = GDALGetRasterNoDataValue(hB, NULL);
-    GDALDataType dt = GDALGetRasterDataType(hB);
+    GDALGetBlockSize(*h, &xsz, &ysz);
+    double scale = GDALGetRasterScale(*h, NULL), 
+           offset = GDALGetRasterOffset(*h, NULL),
+           nodata = GDALGetRasterNoDataValue(*h, NULL);
+    GDALDataType dt = GDALGetRasterDataType(*h);
     switch ( dt )
     {
         case GDT_Int32:
           {
             IntegerVector buf(xsz * ysz, NA_INTEGER);
-            GDALReadBlock(hB, j - 1, i - 1, &buf[0]);
+            GDALReadBlock(*h, j - 1, i - 1, &buf[0]);
             IntegerMatrix res(ysz, xsz);
             for ( int x = 0; x != xsz; ++x )
               for ( int y = 0; y != ysz; ++y )
@@ -321,7 +275,7 @@ SEXP RGDAL_ReadBlock(SEXP band, int i, int j)
         case GDT_Float64:
           {
             NumericVector buf(xsz * ysz, NA_REAL);
-            GDALReadBlock(hB, j - 1, i - 1, &buf[0]);
+            GDALReadBlock(*h, j - 1, i - 1, &buf[0]);
             NumericMatrix res(ysz, xsz);
             for ( int x = 0; x != xsz; ++x )
               for ( int y = 0; y != ysz; ++y )
@@ -335,7 +289,7 @@ SEXP RGDAL_ReadBlock(SEXP band, int i, int j)
         case GDT_Byte:
           {
             RawVector buf(xsz * ysz);
-            GDALReadBlock(hB, j - 1, i - 1, &buf[0]);
+            GDALReadBlock(*h, j - 1, i - 1, &buf[0]);
             RawMatrix res(ysz, xsz);
             for ( int x = 0; x != xsz; ++x )
               for ( int y = 0; y != ysz; ++y )
@@ -348,7 +302,7 @@ SEXP RGDAL_ReadBlock(SEXP band, int i, int j)
         case GDT_Int16:
           {
             std::vector<int16_t> buf(xsz * ysz);
-            GDALReadBlock(hB, j - 1, i - 1, &buf[0]);
+            GDALReadBlock(*h, j - 1, i - 1, &buf[0]);
             IntegerMatrix res(ysz, xsz);
             for ( int x = 0; x != xsz; ++x )
               for ( int y = 0; y != ysz; ++y )
@@ -365,28 +319,27 @@ SEXP RGDAL_ReadBlock(SEXP band, int i, int j)
 }
 
 // [[Rcpp::export]]
-int RGDAL_WriteBlock(SEXP band, int i, int j, SEXP blk)
+int RGDAL_WriteBlock(BandH h, int i, int j, SEXP blk)
 {
-    GDALRasterBandH hB = unwrapHandle<GDALRasterBand>(band);
     int xsz, ysz;
-    GDALGetBlockSize(hB, &xsz, &ysz);
+    GDALGetBlockSize(*h, &xsz, &ysz);
     if ( Rf_length(blk) < xsz * ysz )
         stop("Input does not match block size\n");
-    GDALDataType dt = GDALGetRasterDataType(hB);
+    GDALDataType dt = GDALGetRasterDataType(*h);
     switch ( dt )
     {
         case GDT_Int32:
-            return GDALWriteBlock(hB, j - 1, i - 1, INTEGER(blk));
+            return GDALWriteBlock(*h, j - 1, i - 1, INTEGER(blk));
         case GDT_Float64:
-            return GDALWriteBlock(hB, j - 1, i - 1, REAL(blk));
+            return GDALWriteBlock(*h, j - 1, i - 1, REAL(blk));
         case GDT_Byte:
-            return GDALWriteBlock(hB, j - 1, i - 1, RAW(blk));
+            return GDALWriteBlock(*h, j - 1, i - 1, RAW(blk));
         case GDT_Int16:
           {
             int16_t* buf = (int16_t*) R_alloc(xsz * ysz, 2);
             for ( size_t k = 0; k != xsz * ysz; ++k )
                 buf[k] = INTEGER(blk)[k];
-            return GDALWriteBlock(hB, j - 1, i - 1, &(buf[0]));
+            return GDALWriteBlock(*h, j - 1, i - 1, &(buf[0]));
           }
         default:
             stop("Unsupported data type in block read\n");
@@ -394,65 +347,55 @@ int RGDAL_WriteBlock(SEXP band, int i, int j, SEXP blk)
 }
 
 // [[Rcpp::export]]
-SEXP RGDAL_OGROpen(const char* file, int readonly)
+DatasourceH RGDAL_OGROpen(const char* file, int readonly)
 {
-  OGRDataSourceH res = OGROpen(file, !readonly, NULL);
-  if ( !res ) stop("Cannot open file\n");
-  return wrapHandle<OGRDataSource>(res);
+  return OGROpen(file, !readonly, NULL);
 }
 
 // [[Rcpp::export]]
-void OGRReleaseDataSource(SEXP ds)
+void RGDAL_OGRReleaseDataSource(DatasourceH h)
 {
-  OGRDataSourceH h = unwrapHandle<OGRDataSource>(ds);
-  OGRReleaseDataSource(h);
+  OGRReleaseDataSource(*h);
 }
 
 // [[Rcpp::export]]
-int OGR_DS_GetLayerCount(SEXP ds)
+int RGDAL_OGR_DS_GetLayerCount(DatasourceH h)
 {
-  OGRDataSourceH h = unwrapHandle<OGRDataSource>(ds);
-  return OGR_DS_GetLayerCount(h);
+  return OGR_DS_GetLayerCount(*h);
 }
 
 // [[Rcpp::export]]
-const char* OGR_DS_GetName(SEXP ds)
+const char* RGDAL_OGR_DS_GetName(DatasourceH h)
 {
-  OGRDataSourceH h = unwrapHandle<OGRDataSource>(ds);
-  return OGR_DS_GetName(h);
+  return OGR_DS_GetName(*h);
 }
 
 // [[Rcpp::export]]
-const char* RGDAL_GetDSDriverName(SEXP ds)
+const char* RGDAL_GetDSDriverName(DatasourceH h)
 {
-    OGRDataSourceH h = unwrapHandle<OGRDataSource>(ds);
-    OGRSFDriverH hDr = OGR_DS_GetDriver(h);
+    OGRSFDriverH hDr = OGR_DS_GetDriver(*h);
     return OGR_Dr_GetName(hDr);
 }
 
 // [[Rcpp::export]]
-SEXP OGR_DS_GetLayer(SEXP ds, int i)
+LayerH RGDAL_OGR_DS_GetLayer(DatasourceH h, int i)
 {
-  OGRDataSourceH h = unwrapHandle<OGRDataSource>(ds);
-  OGRLayerH res = OGR_DS_GetLayer(h, i);
-  return wrapHandle<OGRLayer>(res);
+  return OGR_DS_GetLayer(*h, i);
 }
 
 // [[Rcpp::export]]
-SEXP RGDAL_GetRasterExtent(SEXP ds)
+GeometryH RGDAL_GetRasterExtent(DatasetH h)
 {
-    GDALDatasetH hDS = unwrapHandle<GDALDataset>(ds);
-  
     double transf[6],
            geox, geoy,
            xmin = 0, ymin = 0,
-           xmax = GDALGetRasterXSize(hDS),
-           ymax = GDALGetRasterYSize(hDS);
+           xmax = GDALGetRasterXSize(*h),
+           ymax = GDALGetRasterYSize(*h);
 
     OGRGeometryH hGeom = OGR_G_CreateGeometry(wkbPolygon),
                  hRing = OGR_G_CreateGeometry(wkbLinearRing);
     
-    if ( GDALGetGeoTransform(hDS, &(transf[0])) )
+    if ( GDALGetGeoTransform(*h, &(transf[0])) )
     {
       OGR_G_AddPoint_2D(hRing, xmin, ymin);
       OGR_G_AddPoint_2D(hRing, xmin, ymax);
@@ -474,22 +417,19 @@ SEXP RGDAL_GetRasterExtent(SEXP ds)
       OGR_G_AddPoint_2D(hRing, geox, geoy);
     }
     _(OGR_G_AddGeometry(hGeom, hRing));
-    return wrapHandle<OGRGeometry>(hGeom);
+    return hGeom;
 }
 
 // [[Rcpp::export]]
-const char* OGR_L_GetName(SEXP lyr)
+const char* RGDAL_OGR_L_GetName(LayerH h)
 {
-  OGRLayerH h = unwrapHandle<OGRLayer>(lyr);
-  return OGR_L_GetName(h);
+  return OGR_L_GetName(*h);
 }
 
 // [[Rcpp::export]]
-SEXP OGR_DS_GetLayerByName(SEXP ds, const char* lnam)
+LayerH RGDAL_OGR_DS_GetLayerByName(DatasourceH h, const char* lnam)
 {
-  OGRDataSourceH h = unwrapHandle<OGRDataSource>(ds);
-  OGRLayerH res = OGR_DS_GetLayerByName(h, lnam);
-  return wrapHandle<OGRLayer>(res);
+  return OGR_DS_GetLayerByName(*h, lnam);
 }
 
 static OGRGeometryH extentToGeom(OGREnvelope env)
@@ -506,144 +446,105 @@ static OGRGeometryH extentToGeom(OGREnvelope env)
 }
 
 // [[Rcpp::export]]
-SEXP RGDAL_GetLayerEnv(SEXP layer)
+GeometryH RGDAL_GetLayerEnv(LayerH h)
 {
-    OGRLayerH hL = unwrapHandle<OGRLayer>(layer);
     OGREnvelope env;
-    OGR_L_GetExtent(hL, &env, 1);
-    OGRGeometryH res = extentToGeom(env);
-    return wrapHandle<OGRGeometry>(res);
+    OGR_L_GetExtent(*h, &env, 1);
+    return extentToGeom(env);
 }
 
 // [[Rcpp::export]]
-const char* GDALGetProjectionRef(SEXP ds)
+const char* RGDAL_GDALGetProjectionRef(DatasourceH h)
 {
-  GDALDatasetH h = unwrapHandle<GDALDataset>(ds);
-  GDALGetProjectionRef(h);
+  GDALGetProjectionRef(*h);
 }
 
 // [[Rcpp::export]]
-SEXP RGDAL_OSRNewSpatialReference(const char* srss)
+SpRefSysH RGDAL_OSRNewSpatialReference(const char* srss)
 {
-  OGRSpatialReferenceH h = OSRNewSpatialReference(srss);
-  return wrapHandle<OGRSpatialReference>(h);
+  return OSRNewSpatialReference(srss);
 }
 
 // [[Rcpp::export]]
-int RGDAL_OSRSetFromUserInput(SEXP srs, const char* def)
+int RGDAL_OSRSetFromUserInput(SpRefSysH h, const char* def)
 {
-  OGRSpatialReferenceH h = unwrapHandle<OGRSpatialReference>(srs);
-  return OSRSetFromUserInput(h, def);
+  return OSRSetFromUserInput(*h, def);
 }
 
 // [[Rcpp::export]]
-void RGDAL_OSRRelease(SEXP srs)
+void RGDAL_OSRRelease(SpRefSysH h)
 {
-  OGRSpatialReferenceH h = unwrapHandle<OGRSpatialReference>(srs);
-  OSRRelease(h);
+  OSRRelease(*h);
 }
 
 // [[Rcpp::export]]
-SEXP RGDAL_GetWKT(SEXP srs)
+SEXP RGDAL_GetWKT(SpRefSysH h)
 {
-    OGRSpatialReferenceH hSR = unwrapHandle<OGRSpatialReference>(srs);
     char* wktstring;
-    _(OSRExportToPrettyWkt(hSR, &wktstring, 0));
+    _(OSRExportToPrettyWkt(*h, &wktstring, 0));
     SEXP res = Rf_ScalarString(Rf_mkChar(wktstring));
     CPLFree(wktstring);
     return res;
 }
 
 // [[Rcpp::export]]
-SEXP RGDAL_GetPROJ4(SEXP srs)
+SEXP RGDAL_GetPROJ4(SpRefSysH h)
 {
-    OGRSpatialReferenceH hSRS = unwrapHandle<OGRSpatialReference>(srs);
-    if ( ! hSRS )
+    if ( ! *h )
         return(Rf_ScalarString(Rf_mkChar("Null SRS")));
     char* proj4string;
-    _(OSRExportToProj4(hSRS, &proj4string));
+    _(OSRExportToProj4(*h, &proj4string));
     SEXP res = Rf_ScalarString(Rf_mkChar(proj4string));
     CPLFree(proj4string);
     return res;
 }
 
 // [[Rcpp::export]]
-int GDALSetProjection(SEXP ds, const char* proj)
+int RGDAL_GDALSetProjection(DatasetH h, const char* proj)
 {
-  GDALDatasetH h = unwrapHandle<GDALDataset>(ds);
-  return GDALSetProjection(h, proj);
+  return GDALSetProjection(*h, proj);
 }
 
 // [[Rcpp::export]]
-int RGDAL_OGR_L_GetFeatureCount(SEXP lyr)
+int RGDAL_OGR_L_GetFeatureCount(LayerH h)
 {
-  OGRLayerH h = unwrapHandle<OGRLayer>(lyr);
-  return OGR_L_GetFeatureCount(h, 1);
+  return OGR_L_GetFeatureCount(*h, 1);
 }
 
 // [[Rcpp::export]]
-SEXP RGDAL_OGR_L_GetSpatialFilter(SEXP lyr)
+GeometryH RGDAL_OGR_L_GetSpatialFilter(LayerH h)
 {
-  OGRLayerH h = unwrapHandle<OGRLayer>(lyr);
-  OGRGeometryH res = OGR_L_GetSpatialFilter(h);
-  return res ?
-    wrapHandle<OGRGeometry>(res) : 
-    R_NilValue;
+  return OGR_L_GetSpatialFilter(*h);
 }
 
 // [[Rcpp::export]]
-void RGDAL_OGR_L_ResetReading(SEXP lyr)
+void RGDAL_OGR_L_ResetReading(LayerH h)
 {
-  OGRLayerH h = unwrapHandle<OGRLayer>(lyr);
-  OGR_L_ResetReading(h);
+  OGR_L_ResetReading(*h);
 }
 
 // [[Rcpp::export]]
-SEXP RGDAL_OGR_L_GetSpatialRef(SEXP lyr)
+SpRefSysH RGDAL_OGR_L_GetSpatialRef(LayerH h)
 {
-  OGRLayerH h = unwrapHandle<OGRLayer>(lyr);
-  OGRSpatialReferenceH res = OGR_L_GetSpatialRef(h);
-  return res ?
-    wrapHandle<OGRSpatialReference>(res) :
-    R_NilValue;
+  return OGR_L_GetSpatialRef(h);
 }
 
 // [[Rcpp::export]]
-void RGDAL_OGR_G_DestroyGeometry(SEXP geom)
+void RGDAL_OGR_G_DestroyGeometry(GeometryH h)
 {
-  OGRGeometryH h = unwrapHandle<OGRGeometry>(geom);
-  OGR_G_DestroyGeometry(h);
+  OGR_G_DestroyGeometry(*h);
 }
 
 // [[Rcpp::export]]
-SEXP OGR_G_GetSpatialReference(SEXP geom)
+void RGDAL_OGR_G_AssignSpatialReference(GeometryH h1, SpRefSysH h2)
 {
-  OGRGeometryH h = unwrapHandle<OGRGeometry>(geom);
-  OGRSpatialReferenceH res = OGR_G_GetSpatialReference(h);
-  return wrapHandle<OGRSpatialReference>(res);
+  OGR_G_AssignSpatialReference(*h1, *h2);
 }
 
 // [[Rcpp::export]]
-SEXP OSRClone(SEXP sref)
+int RGDAL_OGR_G_GetCoordinateDimension(GeometryH h)
 {
-  OGRSpatialReferenceH h = unwrapHandle<OGRSpatialReference>(sref);
-  OGRSpatialReferenceH res = OSRClone(h);
-  return wrapHandle<OGRSpatialReference>(res);
-}
-
-// [[Rcpp::export]]
-void RGDAL_OGR_G_AssignSpatialReference(SEXP geom, SEXP srs)
-{
-  OGRGeometryH h1 = unwrapHandle<OGRGeometry>(geom);
-  OGRSpatialReferenceH h2 = unwrapHandle<OGRSpatialReference>(srs);
-  OGR_G_AssignSpatialReference(h1, h2);
-}
-
-// [[Rcpp::export]]
-int OGR_G_GetCoordinateDimension(SEXP geom)
-{
-  OGRGeometryH h = unwrapHandle<OGRGeometry>(geom);
-  return OGR_G_GetCoordinateDimension(h);
+  return OGR_G_GetCoordinateDimension(*h);
 }
 
 // These are carried over from my first cut with SWIG
@@ -735,27 +636,23 @@ static SEXP GetPointsInternal(OGRGeometryH hG)
 }
 
 // [[Rcpp::export]]
-SEXP RGDAL_GetPoints(SEXP geom)
+SEXP RGDAL_GetPoints(GeometryH h)
 {
-  OGRGeometryH h = unwrapHandle<OGRGeometry>(geom);
   return GetPointsInternal(h);
 }
 
 // [[Rcpp::export]]
-void RGDAL_DumpGeometry(SEXP geom, const char* fname)
+void RGDAL_DumpGeometry(GeometryH h, const char* fname)
 {
-    OGRGeometryH hG = unwrapHandle<OGRGeometry>(geom);
     FILE* f = std::fopen(fname, "w");
-    OGR_G_DumpReadable(hG, f, "");
+    OGR_G_DumpReadable(*h, f, "");
     std::fclose(f);
 }
 
 // [[Rcpp::export]]
-SEXP RGDAL_ExecSQL(SEXP ds, const char* sql)
+LayerH RGDAL_ExecSQL(DatasourceH h, const char* sql)
 {
-  OGRDataSourceH hDS = unwrapHandle<OGRDataSource>(ds);
-  OGRLayerH res = OGR_DS_ExecuteSQL(hDS, sql, NULL, NULL);
-  return res ? wrapHandle<OGRLayer>(res) : R_NilValue;
+  return OGR_DS_ExecuteSQL(*h, sql, NULL, NULL);
 }
 
 // [[Rcpp::export]]
@@ -793,26 +690,21 @@ SEXP RGDAL_GetFIDs(SEXP lyr)
 }
 
 // [[Rcpp::export]]
-SEXP RGDAL_GetFeature(SEXP lyr, double index)
+FeatureH RGDAL_GetFeature(LayerH h, double index)
 {
-    OGRLayerH hL = unwrapHandle<OGRLayer>(lyr);
-    OGRFeatureH res = OGR_L_GetFeature(hL, (long) index);
-    return wrapHandle<OGRFeature>(res);
+    return OGR_L_GetFeature(*h, (long) index);
 }
 
 // [[Rcpp::export]]
-SEXP OGR_F_GetGeometryRef(SEXP feat)
+GeometryH RGDAL_OGR_F_GetGeometryRef(FeatureH h)
 {
-  OGRFeatureH h = unwrapHandle<OGRFeature>(feat);
-  OGRGeometryH res = OGR_F_GetGeometryRef(h);
-  return wrapHandle<OGRGeometry>(res);
+  return OGR_F_GetGeometryRef(*h);
 }
 
 // [[Rcpp::export]]
-std::string RGDAL_OGR_G_GetGeometryType(SEXP geom)
+std::string RGDAL_OGR_G_GetGeometryType(GeometryH h)
 {
-  OGRGeometryH hG = unwrapHandle<OGRGeometry>(geom);
-  return std::string(OGR_G_GetGeometryName(hG));  // needs to copy
+  return std::string(OGR_G_GetGeometryName(*h));  // needs to copy
 }
 
 static OGRwkbGeometryType typeFromName(std::string name)
@@ -839,29 +731,23 @@ static OGRwkbGeometryType typeFromName(std::string name)
 }
 
 // [[Rcpp::export]]
-SEXP RGDAL_OGR_L_GetNextFeature(SEXP lyr)
+FeatureH RGDAL_OGR_L_GetNextFeature(LayerH h)
 {
-  OGRLayerH h = unwrapHandle<OGRLayer>(lyr);
-  OGRFeatureH res = OGR_L_GetNextFeature(h);
-  return res ?
-      wrapHandle<OGRFeature>(res) :
-      R_NilValue;
+  return OGR_L_GetNextFeature(*h);
 }
 
 // [[Rcpp::export]]
-int GetLayerFieldCount(SEXP lyr)
+int GetLayerFieldCount(LayerH h)
 {
-  OGRLayerH h = unwrapHandle<OGRLayer>(lyr);
-  OGRFeatureDefnH f = OGR_L_GetLayerDefn(h);
+  OGRFeatureDefnH f = OGR_L_GetLayerDefn(*h);
   return f ? OGR_FD_GetFieldCount(f) : 0;
 }
 
 // [[Rcpp::export]]
-SEXP GetFieldNames(SEXP lyr)
+SEXP GetFieldNames(LayerH h)
 {
   CharacterVector res;
-  OGRLayerH h = unwrapHandle<OGRLayer>(lyr);
-  OGRFeatureDefnH f = OGR_L_GetLayerDefn(h);
+  OGRFeatureDefnH f = OGR_L_GetLayerDefn(*h);
   if ( ! f ) stop("Cannot get field definitions\n");
   for ( int i = 0; i != OGR_FD_GetFieldCount(f); ++i )
   {
@@ -874,41 +760,38 @@ SEXP GetFieldNames(SEXP lyr)
 }
 
 // [[Rcpp::export]]
-const char* RGDAL_OGR_L_GetFIDColumn(SEXP lyr)
+const char* RGDAL_OGR_L_GetFIDColumn(LayerH h)
 {
-  OGRLayerH h = unwrapHandle<OGRLayer>(lyr);
-  return OGR_L_GetFIDColumn(h); 
+  return OGR_L_GetFIDColumn(*h); 
 }
 
 // [[Rcpp::export]]
-const char* RGDAL_OGR_L_GetGeometryColumn(SEXP lyr)
+const char* RGDAL_OGR_L_GetGeometryColumn(LayerH h)
 {
-  OGRLayerH h = unwrapHandle<OGRLayer>(lyr);
-  return OGR_L_GetGeometryColumn(h);
+  return OGR_L_GetGeometryColumn(*h);
 }
 
 // Need to convert to Rcpp
 // [[Rcpp::export]]
-SEXP RGDAL_GetFields(SEXP feat)
+SEXP RGDAL_GetFields(FeatureH h)
 {
-    OGRFeatureH hF = unwrapHandle<OGRFeature>(feat);
-    size_t len = OGR_F_GetFieldCount(hF);
+    size_t len = OGR_F_GetFieldCount(*h);
     SEXP res = PROTECT(Rf_allocVector(VECSXP, len));
     SEXP names = PROTECT(Rf_allocVector(STRSXP, len));
     for ( size_t i = 0; i != len; ++i )
     {
-        OGRFieldDefnH fd = OGR_F_GetFieldDefnRef(hF, i);
+        OGRFieldDefnH fd = OGR_F_GetFieldDefnRef(*h, i);
         SET_STRING_ELT(names, i, Rf_mkChar(OGR_Fld_GetNameRef(fd)));
         switch ( OGR_Fld_GetType(fd) )
         {
             case OFTInteger:
-                SET_VECTOR_ELT(res, i, Rf_ScalarInteger(OGR_F_GetFieldAsInteger(hF, i)));
+                SET_VECTOR_ELT(res, i, Rf_ScalarInteger(OGR_F_GetFieldAsInteger(*h, i)));
             break;
             case OFTReal:
-                SET_VECTOR_ELT(res, i, Rf_ScalarReal(OGR_F_GetFieldAsDouble(hF, i)));                
+                SET_VECTOR_ELT(res, i, Rf_ScalarReal(OGR_F_GetFieldAsDouble(*h, i)));                
             break;
             default:
-                SET_VECTOR_ELT(res, i, Rf_mkString(OGR_F_GetFieldAsString(hF, i)));                                
+                SET_VECTOR_ELT(res, i, Rf_mkString(OGR_F_GetFieldAsString(*h, i)));                                
             break;
         }
     }
@@ -918,57 +801,53 @@ SEXP RGDAL_GetFields(SEXP feat)
 }
 
 // [[Rcpp::export]]
-void RGDAL_PrintFeature(SEXP feat, const char* fname)
+void RGDAL_PrintFeature(FeatureH h, const char* fname)
 {
-    OGRFeatureH hF = unwrapHandle<OGRFeature>(feat);
     FILE* f = std::fopen(fname, "w");
-    OGR_F_DumpReadable(hF, f);
+    OGR_F_DumpReadable(*h, f);
     std::fclose(f);
 }
 
 // [[Rcpp::export]]
-SEXP RGDAL_GetGeometries(SEXP lyr)
+SEXP RGDAL_GetGeometries(LayerH h)
 {
-    OGRLayerH hL = unwrapHandle<OGRLayer>(lyr);
-    OGR_L_ResetReading(hL);
-    size_t n = OGR_L_GetFeatureCount(hL, 1);
+    OGR_L_ResetReading(*h);
+    size_t n = OGR_L_GetFeatureCount(*h, 1);
     SEXP res = PROTECT(Rf_allocVector(VECSXP, n));
     for ( size_t i = 0; i != n; ++i )
     {
-        OGRFeatureH hF = OGR_L_GetNextFeature(hL);
+        OGRFeatureH hF = OGR_L_GetNextFeature(*h);
         OGRGeometryH hG = OGR_F_GetGeometryRef(hF);
         SEXP geomPtr = PROTECT(R_MakeExternalPtr((void*) hG, R_NilValue, R_NilValue));
         SET_VECTOR_ELT(res, i, geomPtr);                                
     }
-    OGR_L_ResetReading(hL);
+    OGR_L_ResetReading(*h);
     UNPROTECT(n + 1);
     return res;
 }
 
 // [[Rcpp::export]]
-SEXP RGDAL_OGR_G_CreateGeometry(const char* gtype)
+GeometryH RGDAL_OGR_G_CreateGeometry(const char* gtype)
 {
   OGRwkbGeometryType t = typeFromName(gtype);
   OGRGeometryH res = OGR_G_CreateGeometry(t);
-  return wrapHandle<OGRGeometry>(res);
+  return res;
 }
 
 // [[Rcpp::export]]
-int RGDAL_OGR_DS_TestCapability(SEXP ds, const char* which)
+int RGDAL_OGR_DS_TestCapability(DatasetH h, const char* which)
 {
-  OGRDataSourceH h = unwrapHandle<OGRDataSource>(ds);
-  return OGR_DS_TestCapability(h, which);
+  return OGR_DS_TestCapability(*h, which);
 }
 
 // [[Rcpp::export]]
-int RGDAL_OGR_L_TestCapability(SEXP lyr, const char* which)
+int RGDAL_OGR_L_TestCapability(LayerH h, const char* which)
 {
-  OGRDataSourceH h = unwrapHandle<OGRLayer>(lyr);
-  return OGR_L_TestCapability(h, which);
+  return OGR_L_TestCapability(*h, which);
 }
 
 // [[Rcpp::export]]
-SEXP RGDAL_MakeExtent(double xmin, double xmax, double ymin, double ymax)
+GeometryH RGDAL_MakeExtent(double xmin, double xmax, double ymin, double ymax)
 {
     OGRGeometryH hGeom = OGR_G_CreateGeometry(wkbPolygon),
                  hRing = OGR_G_CreateGeometry(wkbLinearRing);
@@ -979,40 +858,24 @@ SEXP RGDAL_MakeExtent(double xmin, double xmax, double ymin, double ymax)
     OGR_G_AddPoint_2D(hRing, xmax, ymin);
     OGR_G_AddPoint_2D(hRing, xmin, ymin);
     _(OGR_G_AddGeometry(hGeom, hRing));
-    return wrapHandle<OGRGeometry>(hGeom);
+    return hGeom;
 }
 
 // [[Rcpp::export]]
-SEXP RGDAL_OGR_G_GetSpatialReference(SEXP geom)
+SpRefSysH RGDAL_OGR_G_GetSpatialReference(GeometryH h)
 {
-  OGRGeometryH h = unwrapHandle<OGRGeometry>(geom);
-  OGRSpatialReferenceH srs = OGR_G_GetSpatialReference(h);
-  return srs ?
-    wrapHandle<OGRSpatialReference>(srs) :
-    R_NilValue;
+  return OGR_G_GetSpatialReference(*h);
 }
 
 // [[Rcpp::export]]
-SEXP RGDAL_OSRClone(SEXP srs)
+SpRefSysH RGDAL_OSRClone(SpRefSysH h)
 {
-  OGRSpatialReferenceH h = unwrapHandle<OGRSpatialReference>(srs);
-  OGRSpatialReferenceH res = OSRClone(h);
-  return res ?
-    wrapHandle<OGRSpatialReference>(res) :
-    R_NilValue;
+  return OSRClone(*h);
 }
 
 // [[Rcpp::export]]
-const char* RGDAL_GDALGetProjectionRef(SEXP ds)
+SEXP RGDAL_ApplyGeoTransform(DatasetH ds, SEXP point_list, int inverse)
 {
-  GDALDatasetH h = unwrapHandle<GDALDataset>(ds);
-  return GDALGetProjectionRef(h);
-}
-
-// [[Rcpp::export]]
-SEXP RGDAL_ApplyGeoTransform(SEXP ds, SEXP point_list, int inverse)
-{
-    GDALDatasetH hDS = unwrapHandle<GDALDataset>(ds);
     SEXP xi = PROTECT(VECTOR_ELT(point_list, 0)),
          yi = PROTECT(VECTOR_ELT(point_list, 1));
     SEXP res = PROTECT(Rf_allocVector(VECSXP, 2)),
@@ -1020,7 +883,7 @@ SEXP RGDAL_ApplyGeoTransform(SEXP ds, SEXP point_list, int inverse)
          y = PROTECT(Rf_allocVector(REALSXP, Rf_length(yi)));
     double gt[6], igt[6];
     double* gtrans;
-    GDALGetGeoTransform(hDS, &(gt[0]));
+    GDALGetGeoTransform(*ds, &(gt[0]));
     if ( inverse )
     {
         GDALInvGeoTransform(&(gt[0]), &(igt[0]));
@@ -1040,66 +903,59 @@ SEXP RGDAL_ApplyGeoTransform(SEXP ds, SEXP point_list, int inverse)
 }
 
 // [[Rcpp::export]]
-SEXP RGDAL_OGR_G_Clone(SEXP geom)
+GeometryH RGDAL_OGR_G_Clone(GeometryH g)
 {
-  OGRGeometryH hGeom = unwrapHandle<OGRGeometry>(geom);
-  OGRGeometryH res = OGR_G_Clone(hGeom);
-  return res ?
-    wrapHandle<OGRGeometry>(res) :
-    R_NilValue;
+  return OGR_G_Clone(*g);
 }
 
 // [[Rcpp::export]]
-int RGDAL_OGR_G_TransformTo(SEXP geom, SEXP srs)
+int RGDAL_OGR_G_TransformTo(GeometryH g, SpRefSysH s)
 {
-  OGRGeometryH g = unwrapHandle<OGRGeometry>(geom);
-  OGRSpatialReferenceH s = unwrapHandle<OGRSpatialReference>(srs);
-  return OGR_G_TransformTo(g, s);
+  return OGR_G_TransformTo(*g, *s);
 }
 
 // [[Rcpp::export]]
-SEXP RGDAL_CopySubset(SEXP rb, int xos, int yos, int xsz, int ysz)
+DatasetH RGDAL_CopySubset(BandH hRB, int xos, int yos, int xsz, int ysz)
 {
-    GDALRasterBandH hRB = unwrapHandle<GDALRasterBand>(rb);
-    GDALDataType dt = GDALGetRasterDataType(hRB);
+    GDALDataType dt = GDALGetRasterDataType(*hRB);
     GDALDriverH hD = GDALGetDriverByName("MEM");
     GDALDatasetH res = GDALCreate(hD, "", xsz, ysz, 1, dt, NULL);
     GDALRasterBandH band = GDALGetRasterBand(res, 1);
     void* buf = R_alloc(xsz * ysz, GDALGetDataTypeSize(dt) / 8);
-    _(GDALRasterIO(hRB, GF_Read, xos, yos, xsz, ysz, buf, xsz, ysz, dt, 0, 0));
+    _(GDALRasterIO(*hRB, GF_Read, xos, yos, xsz, ysz, buf, xsz, ysz, dt, 0, 0));
     _(GDALRasterIO(band, GF_Write, 0, 0, xsz, ysz, buf, xsz, ysz, dt, 0, 0));
     int hasNoDataValue;
-    double noDataValue = GDALGetRasterNoDataValue(hRB, &hasNoDataValue);
+    double noDataValue = GDALGetRasterNoDataValue(*hRB, &hasNoDataValue);
     if ( hasNoDataValue ) GDALSetRasterNoDataValue(band, noDataValue);
     double gt[6];
-    GDALDatasetH hDS = GDALGetBandDataset(hRB);
+    GDALDatasetH hDS = GDALGetBandDataset(*hRB);
     GDALGetGeoTransform(hDS, &(gt[0]));
     double xos_gt, yos_gt;
     GDALApplyGeoTransform(&(gt[0]), xos, yos, &xos_gt, &yos_gt);
     gt[0] = xos_gt; gt[3] = yos_gt;
     GDALSetGeoTransform(res, &(gt[0]));
     GDALSetProjection(res, GDALGetProjectionRef(hDS));
-    return wrapHandle<GDALDataset>(res);
+    return res;
 }
 
 // [[Rcpp::export]]
-void RGDALWriteRasterBand(SEXP band, SEXP data,
-                          int nDSXOff, int nDSYOff, int nDSXSize, int nDSYSize)
+void RGDALWriteRasterBand(BandH hRB, SEXP data,
+                          int nDSXOff, int nDSYOff,
+                          int nDSXSize, int nDSYSize)
 {
-    GDALRasterBandH hRB = unwrapHandle<GDALRasterBand>(band);
-    if ( GDALGetRasterAccess(hRB) == GA_ReadOnly )
+    if ( GDALGetRasterAccess(*hRB) == GA_ReadOnly )
         stop("Raster band is read-only\n");
     void* buf;
     size_t nr = Rf_nrows(data), nc = Rf_ncols(data), nelem = nr * nc;
-    double scale = 1 / GDALGetRasterScale(hRB, NULL),
-           offset = GDALGetRasterOffset(hRB, NULL);
+    double scale = 1 / GDALGetRasterScale(*hRB, NULL),
+           offset = GDALGetRasterOffset(*hRB, NULL);
     if ( Rf_isInteger(data) )
     {
         buf = R_alloc(nelem, sizeof(int));
         for ( size_t r = 0; r != nr; ++r )
             for ( size_t c = 0; c != nc; ++c )
                 ((int*)buf)[r * nc + c] = scale * INTEGER(data)[c * nr + r] - offset;
-        GDALRasterIO(hRB, GF_Write,
+        GDALRasterIO(*hRB, GF_Write,
                      nDSXOff, nDSYOff,
                      nDSXSize, nDSYSize,
                      buf, nc, nr, GDT_Int32,
@@ -1112,7 +968,7 @@ void RGDALWriteRasterBand(SEXP band, SEXP data,
         for ( size_t r = 0; r != nr; ++r )
             for ( size_t c = 0; c != nc; ++c )
                 ((double*)buf)[r * nc + c] = scale * REAL(data)[c * nr + r] - offset;
-        GDALRasterIO(hRB, GF_Write,
+        GDALRasterIO(*hRB, GF_Write,
                      nDSXOff, nDSYOff,
                      nDSXSize, nDSYSize,
                      buf, nc, nr, GDT_Float64,
@@ -1123,23 +979,26 @@ void RGDALWriteRasterBand(SEXP band, SEXP data,
 }
 
 // [[Rcpp::export]]
-void RGDAL_OGR_G_AddPoint_2D(SEXP geom, double x, double y)
+void RGDAL_OGR_G_AddPoint_2D(GeometryH h, double x, double y)
 {
-  OGRGeometryH h = unwrapHandle<OGRGeometry>(geom);
-  OGR_G_AddPoint_2D(h, x, y);
+  OGR_G_AddPoint_2D(*h, x, y);
 }
 
 // [[Rcpp::export]]
-void RGDAL_OGR_G_Segmentize(SEXP geom, double l)
+void RGDAL_OGR_G_Segmentize(GeometryH h, double l)
 {
-  OGRGeometryH h = unwrapHandle<OGRGeometry>(geom);
-  OGR_G_Segmentize(h, l);
+  OGR_G_Segmentize(*h, l);
 }
 
 // [[Rcpp::export]]
-int RGDAL_OGR_G_AddGeometry(SEXP geom1, SEXP geom2)
+int RGDAL_OGR_G_AddGeometry(GeometryH h1, GeometryH h2)
 {
-  OGRGeometryH h1 = unwrapHandle<OGRGeometry>(geom1),
-               h2 = unwrapHandle<OGRGeometry>(geom2);
-  return OGR_G_AddGeometry(h1, h2);
+  return OGR_G_AddGeometry(*h1, *h2);
 }
+
+// [[Rcpp::export]]
+void RGDAL_OGR_G_CloseRings(GeometryH h)
+{
+  OGR_G_CloseRings(*h);
+}
+
