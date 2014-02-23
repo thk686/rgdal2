@@ -75,11 +75,11 @@ char *SanitizeSRS( const char *pszUserInput )
 }
 
 GDALDatasetH
-RGDAL_RasterWarp(GDALDatasetH hSrcDS,
-                 const char* pszDstFilename,
-                 const char* pszTargetSRS,
-                 const char* pszFormat,
-                 double dfErrorThreshold)
+RGDAL_RasterWarp_Internal(GDALDatasetH hSrcDS,
+                          const char* pszDstFilename,
+                          const char* pszTargetSRS,
+                          const char* pszFormat,
+                          double dfErrorThreshold)
 {
 
     GDALDatasetH	   hDstDS;

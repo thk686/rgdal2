@@ -97,7 +97,7 @@ setMethod('getSRS',
 signature('RGDAL2Dataset'),
 function(object)
 {
-    newSRS(RGDAL_GDALGetProjectionRef(object@handle))
+    newSRS(RGDAL_GetProjectionRef(object@handle))
 })
 
 #' @rdname get-set-srs
@@ -115,7 +115,7 @@ setMethod("getSRS",
 signature("RGDAL2Geometry"),
 function(object)
 {
-    x = RGDAL_OGR_G_GetSpatialReference(object@handle)
+    x = RGDAL_G_GetSpatialReference(object@handle)
     if ( is.null(x) ) NULL
     else newRGDAL2SpatialRef(RGDAL_OSRClone(x))
 })
@@ -135,7 +135,7 @@ setMethod("getSRS",
 signature("RGDAL2Layer"),
 function(object)
 {
-    x = RGDAL_OGR_L_GetSpatialRef(object@handle)
+    x = RGDAL_L_GetSpatialRef(object@handle)
     if ( is.null(x) ) NULL
     else newRGDAL2SpatialRef(OSRClone(x))
 })
@@ -148,7 +148,7 @@ setMethod("setSRS",
 signature(object = "RGDAL2Geometry", SRS = "RGDAL2SpatialRef"),
 function(object, SRS)
 {
-    RGDAL_OGR_G_AssignSpatialReference(object@handle, SRS@handle)
+    RGDAL_G_AssignSpatialReference(object@handle, SRS@handle)
     invisible(object)
 })
 
@@ -217,6 +217,8 @@ function(object, SRS)
     object          
 })
 
+#' Transform vector geometries
+#' 
 #' Project data to new reference system
 #' 
 #' @param object the object to reproject
@@ -234,7 +236,7 @@ function(object, SRS)
 #' show(g2)
 #' 
 #' @aliases reproject-geometry
-#' @rdname reproject
+#' @rdname reproject-vector
 #' @export
 setMethod("reproject",
 signature(object = "RGDAL2Geometry", SRS = "RGDAL2SpatialRef"),
@@ -243,8 +245,8 @@ function(object, SRS)
     if ( isEmptySRS(SRS) ) return(object)
     if ( hasSRS(object) )
     {
-        x = RGDAL_OGR_G_Clone(object@handle)
-        if ( RGDAL_OGR_G_TransformTo(x, SRS@handle) )
+        x = RGDAL_G_Clone(object@handle)
+        if ( RGDAL_G_TransformTo(x, SRS@handle) )
             stop("Error reprojecting geometry")
         res = newRGDAL2Geometry(x)
         setSRS(res, SRS)
@@ -257,7 +259,7 @@ function(object, SRS)
     }
 })
 
-#' @rdname reproject
+#' @rdname reproject-vector
 #' @export
 setMethod("reproject",
 signature(object = "RGDAL2Geometry", SRS = "numeric"),
@@ -266,7 +268,7 @@ function(object, SRS)
     reproject(object, newSRS(paste0("EPSG", SRS, sep = ":")))
 })
 
-#' @rdname reproject
+#' @rdname reproject-vector
 #' @export
 setMethod("reproject",
 signature(object = "RGDAL2Geometry", SRS = "character"),
@@ -275,7 +277,7 @@ function(object, SRS)
     reproject(object, newSRS(SRS))
 })
 
-#' @rdname reproject
+#' @rdname reproject-vector
 #' @export
 setMethod("reproject",
 signature(object = "ANY", SRS = "NULL"),

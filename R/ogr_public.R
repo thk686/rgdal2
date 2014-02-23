@@ -23,7 +23,7 @@
 #' @export
 openOGR = function(fname, readonly = TRUE)
 {
-    x = RGDAL_OGROpen(fname, readonly)
+    x = RGDAL_Open(fname, readonly)
     newRGDAL2Datasource(x)
 }
 
@@ -56,7 +56,7 @@ setMethod('show', 'RGDAL2Datasource',
 function(object)
 {
     ogrinfo = Sys.which('ogrinfo')
-    dsname = RGDAL_OGR_DS_GetName(object@handle)
+    dsname = RGDAL_DS_GetName(object@handle)
     drname = RGDAL_GetDSDriverName(object@handle)
     if ( nchar(ogrinfo) > 0 && drname != "Memory" )
     {
@@ -94,7 +94,7 @@ function(object)
 setMethod('length', "RGDAL2Datasource",
 function(x)
 {
-    RGDAL_OGR_DS_GetLayerCount(x@handle)
+    RGDAL_DS_GetLayerCount(x@handle)
 })
 
 #' @rdname data-source-methods
@@ -180,7 +180,7 @@ openOGRLayer = function(fname, layer = 1L, readonly = TRUE)
 getLayerName = function(x)
 {
     assertClass(x, "RGDAL2Layer")
-    RGDAL_OGR_L_GetName(x@handle)
+    RGDAL_L_GetName(x@handle)
 }
 
 setMethod('show',
@@ -188,7 +188,7 @@ signature('RGDAL2Layer'),
 function(object)
 {
     ogrinfo = Sys.which('ogrinfo')
-    dsname = RGDAL_OGR_DS_GetName(object@datasource@handle)
+    dsname = RGDAL_DS_GetName(object@datasource@handle)
     lyrname = getLayerName(object)
     if ( nchar(ogrinfo) > 0 )
     {
@@ -226,7 +226,7 @@ setMethod('dim',
 signature('RGDAL2Layer'),
 function(x)
 {
-  rows = RGDAL_OGR_L_GetFeatureCount(x@handle)
+  rows = RGDAL_L_GetFeatureCount(x@handle)
   cols = GetLayerFieldCount(x@handle)
   c(rows, cols)
 })
@@ -323,7 +323,7 @@ execSQL = function(x, sql)
 {
     assertClass(x, "RGDAL2Datasource")
     lyr = RGDAL_ExecSQL(x@handle, sql)
-    RGDAL_OGR_DS_ReleaseResultSet(x@handle, lyr)
+    RGDAL_DS_ReleaseResultSet(x@handle, lyr)
     invisible(x)
 }
 
@@ -332,7 +332,7 @@ signature('RGDAL2SQLLayer'),
 function(object)
 {
     ogrinfo = Sys.which('ogrinfo')
-    dsname = RGDAL_OGR_DS_GetName(object@datasource@handle)
+    dsname = RGDAL_DS_GetName(object@datasource@handle)
     if ( nchar(ogrinfo) > 0 )
     {
         info = pipe(paste(ogrinfo, '-so', dsname, '-sql \'', object@sql, '\''), 'rt')
@@ -364,7 +364,7 @@ function(object)
 rewind = function(x)
 {
     assertClass(x, "RGDAL2Layer")
-    RGDAL_OGR_L_ResetReading(x@handle)
+    RGDAL_L_ResetReading(x@handle)
     invisible(x)
 }
 
@@ -417,7 +417,7 @@ getFeature = function(x, fid)
 getNextFeature = function(x)
 {
     assertClass(x, "RGDAL2Layer")
-    feat = RGDAL_OGR_L_GetNextFeature(x@handle)
+    feat = RGDAL_L_GetNextFeature(x@handle)
     newRGDAL2Feature(feat, x)
 }
 
@@ -631,9 +631,9 @@ function(from)
         getFields(i)
     }
     res = cbind(getIDs(from), res)
-    fidcolnam = RGDAL_OGR_L_GetFIDColumn(from@handle)
+    fidcolnam = RGDAL_L_GetFIDColumn(from@handle)
     names(res)[1] = ifelse(nchar(fidcolnam), fidcolname, "FID")
-    geomfname = RGDAL_OGR_L_GetGeometryColumn(from@handle)
+    geomfname = RGDAL_L_GetGeometryColumn(from@handle)
     if ( nchar(geomfname) == 0 ) geomfname = "GEOM"
     class(res) = c('RGDAL2LayerDF', class(res))
     res[[geomfname]] = getGeometries(from)
@@ -652,7 +652,7 @@ print.RGDAL2LayerDF = function(x, ...)
     {
         x[[ii]] = sapply(x[[ii]], function(a)
         {
-            RGDAL_OGR_G_GetGeometryType(a@handle)
+            RGDAL_G_GetGeometryType(a@handle)
         })
     }
     class(x) = class(x)[-1]
@@ -717,7 +717,7 @@ setSpatialFilter = function(layer, geom)
         warning("Region geometry has null projection")
         filt = geom
     }
-    RGDAL_OGR_L_SetSpatialFilter(layer@handle, filt@handle)
+    RGDAL_L_SetSpatialFilter(layer@handle, filt@handle)
     invisible(layer)
 }
 
@@ -726,7 +726,7 @@ setSpatialFilter = function(layer, geom)
 getSpatialFilter = function(layer)
 {
     assertClass(layer, "RGDAL2Layer")
-    res = RGDAL_OGR_L_GetSpatialFilter(layer@handle)
+    res = RGDAL_L_GetSpatialFilter(layer@handle)
     newRGDAL2Geometry(res)
 }
 
@@ -736,7 +736,7 @@ getSpatialFilter = function(layer)
 setSelectWhere = function(layer, where)
 {
     assertClass(layer, "RGDAL2Layer")
-    if ( RGDAL_OGR_L_SetAttributeFilter(layer@handle, where) )
+    if ( RGDAL_L_SetAttributeFilter(layer@handle, where) )
         stop("Error setting attribute filter")
     invisible(layer)
 }
@@ -800,7 +800,7 @@ getID = function(x)
 getGeometry = function(x)
 {
     assertClass(x, "RGDAL2Feature")
-    geom = RGDAL_OGR_F_GetGeometryRef(x@handle)
+    geom = RGDAL_F_GetGeometryRef(x@handle)
     newRGDAL2LayerGeometry(geom, x@layer)
 }
 
@@ -835,7 +835,7 @@ function(object)
 #' @export
 newGeometry = function(geomType, points = NULL, SRS = NULL)
 {
-    res = RGDAL_OGR_G_CreateGeometry(geomType)
+    res = RGDAL_G_CreateGeometry(geomType)
     res = newRGDAL2Geometry(res)
     if ( ! is.null(points) )
         addPoints(res, points)
@@ -859,7 +859,7 @@ function(object)
 #Fixme: this should return count of geometries
 setMethod('length', "RGDAL2Geometry", function(x)
 {
-    cdim = RGDAL_OGR_G_GetCoordinateDimension(x@handle)
+    cdim = RGDAL_G_GetCoordinateDimension(x@handle)
     if ( cdim == 0 ) return(0L)
     length(unlist(getPoints(x))) / cdim
 })
@@ -876,7 +876,7 @@ getPoints = function(x, collapse = FALSE)
 addPoints = function(x, points)
 {
     assertClass(x, "RGDAL2Geometry")
-    switch(RGDAL_OGR_G_GetGeometryType(x@handle),
+    switch(RGDAL_G_GetGeometryType(x@handle),
            POINT = addPointsFromList(x, points),
            LINEARRING = addPointsFromList(x, points),
            LINESTRING = addPointsFromList(x, points),
@@ -895,7 +895,7 @@ addGeometry = function(g1, g2)
     stopifnot(inherits(g1, "RGDAL2Geometry"))
     stopifnot(inherits(g2, "RGDAL2Geometry"))
     stopifnot(length(g2) != 0)
-    if ( RGDAL_OGR_G_AddGeometry(g1@handle, g2@handle) )
+    if ( RGDAL_G_AddGeometry(g1@handle, g2@handle) )
         stop("Cannot add geometry")
     invisible(g1)
 }
@@ -903,7 +903,7 @@ addGeometry = function(g1, g2)
 setMethod("[", "RGDAL2Geometry",
 function(x, i)
 {
-    handle = RGDAL_OGR_G_GetGeometryRef(x@handle, i)
+    handle = RGDAL_G_GetGeometryRef(x@handle, i)
     res = newRGDAL2Geometry(handle) #Who owns handle?
     if ( !is.null(res) )
         setSRS(res, getSRS(x))
@@ -925,10 +925,10 @@ function(object)
 setMethod("properties", "RGDAL2Geometry",
 function(object)
 {
-    list(is.empty = RGDAL_OGR_G_IsEmpty(x@handle) == 1,
-         is.valid = RGDAL_OGR_G_IsValid(x@handle) == 1,
-         is.simple = RGDAL_OGR_G_IsSimple(x@handle) == 1,
-         is.ring = RGDAL_OGR_G_IsRing(x@handle) == 1)
+    list(is.empty = RGDAL_G_IsEmpty(x@handle) == 1,
+         is.valid = RGDAL_G_IsValid(x@handle) == 1,
+         is.simple = RGDAL_G_IsSimple(x@handle) == 1,
+         is.ring = RGDAL_G_IsRing(x@handle) == 1)
 })
 
 #
@@ -983,7 +983,7 @@ function(object)
 {
     assertClass(lhs, 'RGDAL2Geometry')
     assertClass(rhs, 'RGDAL2Geometry')
-    RGDAL_OGR_G_Intersects(lhs@handle, rhs@handle) == 1;
+    RGDAL_G_Intersects(lhs@handle, rhs@handle) == 1;
 }
 
 #' @rdname geometry-binary
@@ -992,7 +992,7 @@ function(object)
 {
     assertClass(lhs, 'RGDAL2Geometry')
     assertClass(rhs, 'RGDAL2Geometry')
-    RGDAL_OGR_G_Equals(lhs@handle, rhs@handle) == 1
+    RGDAL_G_Equals(lhs@handle, rhs@handle) == 1
 }
 
 #' @rdname geometry-binary
@@ -1001,7 +1001,7 @@ function(object)
 {
     assertClass(lhs, 'RGDAL2Geometry')
     assertClass(rhs, 'RGDAL2Geometry')
-    RGDAL_OGR_G_Disjoint(lhs@handle, rhs@handle) == 1
+    RGDAL_G_Disjoint(lhs@handle, rhs@handle) == 1
 }
 
 #' @rdname geometry-binary
@@ -1010,7 +1010,7 @@ function(object)
 {
     assertClass(lhs, 'RGDAL2Geometry')
     assertClass(rhs, 'RGDAL2Geometry')
-    RGDAL_OGR_G_Touches(lhs@handle, rhs@handle) == 1
+    RGDAL_G_Touches(lhs@handle, rhs@handle) == 1
 }
 
 #' @rdname geometry-binary
@@ -1019,7 +1019,7 @@ function(object)
 {
     assertClass(lhs, 'RGDAL2Geometry')
     assertClass(rhs, 'RGDAL2Geometry')
-    RGDAL_OGR_G_Crosses(lhs@handle, rhs@handle) == 1
+    RGDAL_G_Crosses(lhs@handle, rhs@handle) == 1
 }
 
 #' @rdname geometry-binary
@@ -1028,7 +1028,7 @@ function(object)
 {
     assertClass(lhs, 'RGDAL2Geometry')
     assertClass(rhs, 'RGDAL2Geometry')
-    RGDAL_OGR_G_Within(lhs@handle, rhs@handle) == 1
+    RGDAL_G_Within(lhs@handle, rhs@handle) == 1
 }
 
 #' @rdname geometry-binary
@@ -1037,7 +1037,7 @@ function(object)
 {
     assertClass(lhs, 'RGDAL2Geometry')
     assertClass(rhs, 'RGDAL2Geometry')
-    RGDAL_OGR_G_Contains(lhs@handle, rhs@handle) == 1
+    RGDAL_G_Contains(lhs@handle, rhs@handle) == 1
 }
 
 #' @rdname geometry-binary
@@ -1046,7 +1046,7 @@ function(object)
 {
     assertClass(lhs, 'RGDAL2Geometry')
     assertClass(rhs, 'RGDAL2Geometry')
-    RGDAL_OGR_G_Overlaps(lhs@handle, rhs@handle) == 1
+    RGDAL_G_Overlaps(lhs@handle, rhs@handle) == 1
 }
 
 #' @rdname geometry-binary
@@ -1055,7 +1055,7 @@ function(object)
 {
     assertClass(lhs, 'RGDAL2Geometry')
     assertClass(rhs, 'RGDAL2Geometry')
-    x = RGDAL_OGR_G_Intersection(lhs@handle, rhs@handle)
+    x = RGDAL_G_Intersection(lhs@handle, rhs@handle)
     newRGDAL2Geometry(handle = x)
 }
 
@@ -1065,7 +1065,7 @@ function(object)
 {
     assertClass(lhs, 'RGDAL2Geometry')
     assertClass(rhs, 'RGDAL2Geometry')
-    x = RGDAL_OGR_G_Union(lhs@handle, rhs@handle)
+    x = RGDAL_G_Union(lhs@handle, rhs@handle)
     newRGDAL2Geometry(x)
 }
 
@@ -1075,7 +1075,7 @@ function(object)
 {
     assertClass(lhs, 'RGDAL2Geometry')
     assertClass(rhs, 'RGDAL2Geometry')
-    x = RGDAL_OGR_G_Difference(lhs@handle, rhs@handle)
+    x = RGDAL_G_Difference(lhs@handle, rhs@handle)
     newRGDAL2Geometry(x)
 }
 
@@ -1085,7 +1085,7 @@ function(object)
 {
     assertClass(lhs, 'RGDAL2Geometry')
     assertClass(rhs, 'RGDAL2Geometry')
-    x = RGDAL_OGR_G_SymDifference(lhs@handle, rhs@handle)
+    x = RGDAL_G_SymDifference(lhs@handle, rhs@handle)
     newRGDAL2Geometry(x)
 }
 
@@ -1095,7 +1095,7 @@ function(object)
 {
     assertClass(lhs, 'RGDAL2Geometry')
     assertClass(rhs, 'RGDAL2Geometry')
-    RGDAL_OGR_G_Distance(lhs@handle, rhs@handle)
+    RGDAL_G_Distance(lhs@handle, rhs@handle)
 }
 
 #' Unary geometry functions
@@ -1115,7 +1115,7 @@ centroid = function(object)
 {
   assertClass(object, "RGDAL2Geometry")
   res = newGeometry("wkbPoint")
-  if ( RGDAL_OGR_G_Centroid(object@handle, res@handle) )
+  if ( RGDAL_G_Centroid(object@handle, res@handle) )
     stop("Error computing centroid")
   res
 }
@@ -1125,7 +1125,7 @@ centroid = function(object)
 boundary = function(object)
 {
     assertClass(object, "RGDAL2Geometry")
-    res = RGDAL_OGR_G_Boundary(object@handle)
+    res = RGDAL_G_Boundary(object@handle)
     newRGDAL2Geometry(res)
 }
 
@@ -1134,7 +1134,7 @@ boundary = function(object)
 convexHull = function(object)
 {
     assertClass(object, "RGDAL2Geometry")
-    res = RGDAL_OGR_G_ConvexHull(object@handle)
+    res = RGDAL_G_ConvexHull(object@handle)
     newRGDAL2Geometry(res)
 }
 
@@ -1143,7 +1143,7 @@ convexHull = function(object)
 unionCascaded = function(object)
 {
     assertClass(object, "RGDAL2Geometry")
-    res = RGDAL_OGR_G_UnionCascaded(object@handle)
+    res = RGDAL_G_UnionCascaded(object@handle)
     newRGDAL2Geometry(res)
 }
 
@@ -1152,7 +1152,7 @@ unionCascaded = function(object)
 lineLength = function(object)
 {
     assertClass(object, "RGDAL2Geometry")
-    RGDAL_OGR_G_Length(object@handle)
+    RGDAL_G_Length(object@handle)
 }
 
 #' @rdname geometry-unary
@@ -1160,7 +1160,7 @@ lineLength = function(object)
 area = function(object)
 {
     assertClass(object, "RGDAL2Geometry")
-    RGDAL_OGR_G_Area(object@handle)
+    RGDAL_G_Area(object@handle)
 }
 
 #' @param tolerance larger values increase simplification
@@ -1171,9 +1171,9 @@ simplify = function(object, tolerance, preserve.topology = TRUE)
 {
     assertClass(object, "RGDAL2Geometry")
     x = if ( preserve.topology )
-            RGDAL_OGR_G_SimplifyPreserveTopology(object@handle, tolerance)
+            RGDAL_G_SimplifyPreserveTopology(object@handle, tolerance)
         else
-            RGDAL_OGR_G_Simplify(object@handle, tolerance)
+            RGDAL_G_Simplify(object@handle, tolerance)
    res = newRGDAL2Geometry(x)
    setSRS(res, getSRS(object))
    res
@@ -1184,7 +1184,7 @@ simplify = function(object, tolerance, preserve.topology = TRUE)
 polygonize = function(object)
 {
     assertClass(object, "RGDAL2Geometry")
-    x = RGDAL_OGR_G_Polygonize(object@handle)
+    x = RGDAL_G_Polygonize(object@handle)
     res = newRGDAL2Geometry(x)
     if ( !is.null(res) )
         setSRS(res, getSRS(object))

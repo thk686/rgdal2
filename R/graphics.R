@@ -29,7 +29,7 @@ geometryGrob = function(object, ..., units = "native")
 {
     points = getPoints(object)
     if ( length(unlist(points)) == 0 ) return(grob())
-    switch(RGDAL_OGR_G_GetGeometryType(object@handle),
+    switch(RGDAL_G_GetGeometryType(object@handle),
            POINT = pointsGrob(points$x, points$y, default.units = units, ...),
            LINEARRING = polylineGrob(points$x, points$y, default.units = units, ...),
            LINESTRING = linesGrob(points$x, points$y, default.units = units, ...),
@@ -290,14 +290,14 @@ graticule = function(dlat = 10, dlon = 10, linc = 1)
     {
         pts = list(x = rep(lon, 2), y = c(-90, 90))
         gg = newGeometry('LINESTRING', pts, latlon)
-        RGDAL_OGR_G_Segmentize(gg@handle, linc)
+        RGDAL_G_Segmentize(gg@handle, linc)
         addGeometry(g, gg)
     }
     for ( lat in seq(-90, 90, by = dlat) )
     {
         pts = list(x = c(-180, 180), y = rep(lat, 2))
         gg = newGeometry('LINESTRING', pts, latlon)
-        RGDAL_OGR_G_Segmentize(gg@handle, linc)
+        RGDAL_G_Segmentize(gg@handle, linc)
         addGeometry(g, gg)
     }
     return(g)

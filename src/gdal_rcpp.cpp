@@ -66,7 +66,7 @@ void GDALInit()
 }
 
 // [[Rcpp::export]]
-DatasetH RGDAL_GDALOpen(const char* file,
+DatasetH RGDAL_Open(const char* file,
                     bool readonly = true,
                     bool shared = true)
 {
@@ -89,7 +89,7 @@ bool isNullPtr(SEXP x)
 }
 
 // [[Rcpp::export]]
-const char* RGDAL_GDALGetDescription(DatasetH h)
+const char* RGDAL_GetDescription(DatasetH h)
 {
   return GDALGetDescription(*h);  
 }
@@ -201,7 +201,7 @@ IntegerVector RGDAL_GetBlockSize(DatasetH h)
 }
 
 // [[Rcpp::export]]
-SEXP RGDAL_readRasterData(BandH h,
+SEXP RGDAL_ReadRasterData(BandH h,
                           int x, int y,
                           int xszin, int yszin,
                           int xszout, int yszout,
@@ -353,32 +353,32 @@ DatasourceH RGDAL_OGROpen(const char* file, int readonly)
 }
 
 // [[Rcpp::export]]
-void RGDAL_OGRReleaseDataSource(DatasourceH h)
+void RGDAL_ReleaseDataSource(DatasourceH h)
 {
   OGRReleaseDataSource(*h);
 }
 
 // [[Rcpp::export]]
-int RGDAL_OGR_DS_GetLayerCount(DatasourceH h)
+int RGDAL_DS_GetLayerCount(DatasourceH h)
 {
   return OGR_DS_GetLayerCount(*h);
 }
 
 // [[Rcpp::export]]
-const char* RGDAL_OGR_DS_GetName(DatasourceH h)
+const char* RGDAL_DS_GetName(DatasourceH h)
 {
   return OGR_DS_GetName(*h);
 }
 
 // [[Rcpp::export]]
-const char* RGDAL_GetDSDriverName(DatasourceH h)
+const char* RGDAL_DS_GetDriver(DatasourceH h)
 {
     OGRSFDriverH hDr = OGR_DS_GetDriver(*h);
     return OGR_Dr_GetName(hDr);
 }
 
 // [[Rcpp::export]]
-LayerH RGDAL_OGR_DS_GetLayer(DatasourceH h, int i)
+LayerH RGDAL_DS_GetLayer(DatasourceH h, int i)
 {
   return OGR_DS_GetLayer(*h, i);
 }
@@ -421,13 +421,13 @@ GeometryH RGDAL_GetRasterExtent(DatasetH h)
 }
 
 // [[Rcpp::export]]
-const char* RGDAL_OGR_L_GetName(LayerH h)
+const char* RGDAL_L_GetName(LayerH h)
 {
   return OGR_L_GetName(*h);
 }
 
 // [[Rcpp::export]]
-LayerH RGDAL_OGR_DS_GetLayerByName(DatasourceH h, const char* lnam)
+LayerH RGDAL_DS_GetLayerByName(DatasourceH h, const char* lnam)
 {
   return OGR_DS_GetLayerByName(*h, lnam);
 }
@@ -454,7 +454,7 @@ GeometryH RGDAL_GetLayerEnv(LayerH h)
 }
 
 // [[Rcpp::export]]
-const char* RGDAL_GDALGetProjectionRef(DatasourceH h)
+const char* RGDAL_GetProjectionRef(DatasourceH h)
 {
   GDALGetProjectionRef(*h);
 }
@@ -500,49 +500,49 @@ SEXP RGDAL_GetPROJ4(SpRefSysH h)
 }
 
 // [[Rcpp::export]]
-int RGDAL_GDALSetProjection(DatasetH h, const char* proj)
+int RGDAL_SetProjection(DatasetH h, const char* proj)
 {
   return GDALSetProjection(*h, proj);
 }
 
 // [[Rcpp::export]]
-int RGDAL_OGR_L_GetFeatureCount(LayerH h)
+int RGDAL_L_GetFeatureCount(LayerH h)
 {
   return OGR_L_GetFeatureCount(*h, 1);
 }
 
 // [[Rcpp::export]]
-GeometryH RGDAL_OGR_L_GetSpatialFilter(LayerH h)
+GeometryH RGDAL_L_GetSpatialFilter(LayerH h)
 {
   return OGR_L_GetSpatialFilter(*h);
 }
 
 // [[Rcpp::export]]
-void RGDAL_OGR_L_ResetReading(LayerH h)
+void RGDAL_L_ResetReading(LayerH h)
 {
   OGR_L_ResetReading(*h);
 }
 
 // [[Rcpp::export]]
-SpRefSysH RGDAL_OGR_L_GetSpatialRef(LayerH h)
+SpRefSysH RGDAL_L_GetSpatialRef(LayerH h)
 {
   return OGR_L_GetSpatialRef(h);
 }
 
 // [[Rcpp::export]]
-void RGDAL_OGR_G_DestroyGeometry(GeometryH h)
+void RGDAL_G_DestroyGeometry(GeometryH h)
 {
   OGR_G_DestroyGeometry(*h);
 }
 
 // [[Rcpp::export]]
-void RGDAL_OGR_G_AssignSpatialReference(GeometryH h1, SpRefSysH h2)
+void RGDAL_G_AssignSpatialReference(GeometryH h1, SpRefSysH h2)
 {
   OGR_G_AssignSpatialReference(*h1, *h2);
 }
 
 // [[Rcpp::export]]
-int RGDAL_OGR_G_GetCoordinateDimension(GeometryH h)
+int RGDAL_G_GetCoordinateDimension(GeometryH h)
 {
   return OGR_G_GetCoordinateDimension(*h);
 }
@@ -638,7 +638,7 @@ static SEXP GetPointsInternal(OGRGeometryH hG)
 // [[Rcpp::export]]
 SEXP RGDAL_GetPoints(GeometryH h)
 {
-  return GetPointsInternal(h);
+  return GetPointsInternal(*h);
 }
 
 // [[Rcpp::export]]
@@ -656,21 +656,17 @@ LayerH RGDAL_ExecSQL(DatasourceH h, const char* sql)
 }
 
 // [[Rcpp::export]]
-void OGR_DS_ReleaseResultSet(SEXP ds, SEXP lyr)
+void RGDAL_DS_ReleaseResultSet(DatasourceH h1, LayerH h2)
 {
-  OGRDataSourceH h1 = unwrapHandle<OGRDataSource>(ds);
-  OGRLayerH h2 = unwrapHandle<OGRLayer>(lyr);
-  OGR_DS_ReleaseResultSet(h1, h2);
+  OGR_DS_ReleaseResultSet(*h1, *h2);
 }
 
 // [[Rcpp::export]]
-SEXP RGDAL_GetGeomEnv(SEXP geom)
+GeometryH RGDAL_GetGeomEnv(GeometryH h)
 {
-    OGRGeometryH hG = unwrapHandle<OGRGeometry>(geom);
     OGREnvelope env;
-    OGR_G_GetEnvelope(hG, &env);
-    OGRGeometryH res = extentToGeom(env);
-    return wrapHandle<OGRGeometry>(res);
+    OGR_G_GetEnvelope(*h, &env);
+    return extentToGeom(env);
 }
 
 // [[Rcpp::export]]
@@ -696,13 +692,13 @@ FeatureH RGDAL_GetFeature(LayerH h, double index)
 }
 
 // [[Rcpp::export]]
-GeometryH RGDAL_OGR_F_GetGeometryRef(FeatureH h)
+GeometryH RGDAL_F_GetGeometryRef(FeatureH h)
 {
   return OGR_F_GetGeometryRef(*h);
 }
 
 // [[Rcpp::export]]
-std::string RGDAL_OGR_G_GetGeometryType(GeometryH h)
+std::string RGDAL_G_GetGeometryType(GeometryH h)
 {
   return std::string(OGR_G_GetGeometryName(*h));  // needs to copy
 }
@@ -731,7 +727,7 @@ static OGRwkbGeometryType typeFromName(std::string name)
 }
 
 // [[Rcpp::export]]
-FeatureH RGDAL_OGR_L_GetNextFeature(LayerH h)
+FeatureH RGDAL_L_GetNextFeature(LayerH h)
 {
   return OGR_L_GetNextFeature(*h);
 }
@@ -760,13 +756,13 @@ SEXP GetFieldNames(LayerH h)
 }
 
 // [[Rcpp::export]]
-const char* RGDAL_OGR_L_GetFIDColumn(LayerH h)
+const char* RGDAL_L_GetFIDColumn(LayerH h)
 {
   return OGR_L_GetFIDColumn(*h); 
 }
 
 // [[Rcpp::export]]
-const char* RGDAL_OGR_L_GetGeometryColumn(LayerH h)
+const char* RGDAL_L_GetGeometryColumn(LayerH h)
 {
   return OGR_L_GetGeometryColumn(*h);
 }
@@ -827,7 +823,7 @@ SEXP RGDAL_GetGeometries(LayerH h)
 }
 
 // [[Rcpp::export]]
-GeometryH RGDAL_OGR_G_CreateGeometry(const char* gtype)
+GeometryH RGDAL_G_CreateGeometry(const char* gtype)
 {
   OGRwkbGeometryType t = typeFromName(gtype);
   OGRGeometryH res = OGR_G_CreateGeometry(t);
@@ -835,13 +831,13 @@ GeometryH RGDAL_OGR_G_CreateGeometry(const char* gtype)
 }
 
 // [[Rcpp::export]]
-int RGDAL_OGR_DS_TestCapability(DatasetH h, const char* which)
+int RGDAL_DS_TestCapability(DatasetH h, const char* which)
 {
   return OGR_DS_TestCapability(*h, which);
 }
 
 // [[Rcpp::export]]
-int RGDAL_OGR_L_TestCapability(LayerH h, const char* which)
+int RGDAL_L_TestCapability(LayerH h, const char* which)
 {
   return OGR_L_TestCapability(*h, which);
 }
@@ -862,7 +858,7 @@ GeometryH RGDAL_MakeExtent(double xmin, double xmax, double ymin, double ymax)
 }
 
 // [[Rcpp::export]]
-SpRefSysH RGDAL_OGR_G_GetSpatialReference(GeometryH h)
+SpRefSysH RGDAL_G_GetSpatialReference(GeometryH h)
 {
   return OGR_G_GetSpatialReference(*h);
 }
@@ -903,13 +899,13 @@ SEXP RGDAL_ApplyGeoTransform(DatasetH ds, SEXP point_list, int inverse)
 }
 
 // [[Rcpp::export]]
-GeometryH RGDAL_OGR_G_Clone(GeometryH g)
+GeometryH RGDAL_G_Clone(GeometryH g)
 {
   return OGR_G_Clone(*g);
 }
 
 // [[Rcpp::export]]
-int RGDAL_OGR_G_TransformTo(GeometryH g, SpRefSysH s)
+int RGDAL_G_TransformTo(GeometryH g, SpRefSysH s)
 {
   return OGR_G_TransformTo(*g, *s);
 }
@@ -979,26 +975,40 @@ void RGDALWriteRasterBand(BandH hRB, SEXP data,
 }
 
 // [[Rcpp::export]]
-void RGDAL_OGR_G_AddPoint_2D(GeometryH h, double x, double y)
+void RGDAL_G_AddPoint_2D(GeometryH h, double x, double y)
 {
   OGR_G_AddPoint_2D(*h, x, y);
 }
 
 // [[Rcpp::export]]
-void RGDAL_OGR_G_Segmentize(GeometryH h, double l)
+void RGDAL_G_Segmentize(GeometryH h, double l)
 {
   OGR_G_Segmentize(*h, l);
 }
 
 // [[Rcpp::export]]
-int RGDAL_OGR_G_AddGeometry(GeometryH h1, GeometryH h2)
+int RGDAL_G_AddGeometry(GeometryH h1, GeometryH h2)
 {
   return OGR_G_AddGeometry(*h1, *h2);
 }
 
 // [[Rcpp::export]]
-void RGDAL_OGR_G_CloseRings(GeometryH h)
+void RGDAL_G_CloseRings(GeometryH h)
 {
   OGR_G_CloseRings(*h);
 }
 
+extern "C"
+GDALDatasetH
+RGDAL_RasterWarp_Internal(GDALDatasetH hSrcDS,
+                          const char* pszDstFilename,
+                          const char* pszTargetSRS,
+                          const char* pszFormat,
+                          double dfErrorThreshold);
+                          
+// [[Rcpp::export]]
+DatasetH RGDAL_RasterWarp(DatasetH h, const char* file, const char* srs,
+                          const char* driver, double err)
+{
+  return RGDAL_RasterWarp_Internal(*h, file, srs, driver, err);
+}

@@ -22,7 +22,7 @@
 #' @export
 openGDAL = function(fname, readonly = TRUE, shared = TRUE)
 {
-  x = RGDAL_GDALOpen(fname, readonly, shared)
+  x = RGDAL_Open(fname, readonly, shared)
   newRGDAL2Dataset(x)
 }
 
@@ -90,7 +90,7 @@ newGDALDataset = function(nrow, ncol, nbands = 1L,
                           dataType = 'Int32', driver = 'MEM',
                           file = tempfile(), nosave = FALSE)
 {
-  x = RGDALCreateDataset(driver, file, nrow, ncol, nbands, dataType)
+  x = RGDAL_CreateDataset(driver, file, nrow, ncol, nbands, dataType)
   if ( driver == 'MEM' || nosave ) unlink(file)
   newRGDAL2Dataset(x)
 }
@@ -271,7 +271,7 @@ newGDALBand = function(nrow, ncol, dataType = 'Int32', driver = 'MEM', file = te
 getBand = function(x, band = 1L)
 {
   assertClass(x, 'RGDAL2Dataset')
-  b = RGDAL_GDALGetRasterBand(x@handle, band)
+  b = RGDAL_GetRasterBand(x@handle, band)
   newRGDAL2RasterBand(b, x)
 }
 
@@ -343,8 +343,8 @@ getColorTable = function(x)
 getMask = function(x)
 {
   x = checkBand(x)
-  m = GDALGetMaskBand(x@handle)
-  f = GDALGetMaskFlags(x@handle)
+  m = RGDAL_GetMaskBand(x@handle)
+  f = RGDAL_GetMaskFlags(x@handle)
   newRGDAL2RasterMask(m, x@dataset, f)
 }
 
@@ -376,40 +376,19 @@ getMaskFlags = function(x)
 {
   x = checkBand(x)
   if ( inherits(x, "RGDAL2RasterMask") ) flag = x@flag
-  else flag = GDALGetMaskFlags(x@handle)
+  else flag = RGDAL_GetMaskFlags(x@handle)
   list(no.mask = bitwAnd(flag, 1L) != 0L,
        is.shared = bitwAnd(flag, 2L) != 0L,
        is.alpha = bitwAnd(flag, 4L) != 0L,
        is.nodata = bitwAnd(flag, 8L) != 0L)
 }
 
-# Display information about a dataset
-# 
-# @param object a dataset
-# 
-# @details
-# If possible, this function will call and return the output of
-# the \code{gdalinfo} command. An attempt is made to discover the
-# number of console lines and truncate the output to fit on the
-# current console. Otherwise, a simple message is printed along
-# with the memmory address of the handle.
-# 
-# @seealso \code{\link{show}}
-# 
-# @examples
-# f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
-# x = openGDAL(f)
-# show(x)
-#
-# @aliases show-dataset
-# @export
-
 setMethod('show',
 signature('RGDAL2Dataset'),
 function(object)
 {
     gdalinfo = Sys.which('gdalinfo')
-    fname = RGDAL_GDALGetDescription(object@handle)
+    fname = RGDAL_GetDescription(object@handle)
     if ( nchar(gdalinfo) > 0 && file.access(fname, 4) == 0 )
     {
         info = pipe(paste(gdalinfo, '-nogcp -nomd -noct -nofl', fname), 'rt')
@@ -424,20 +403,6 @@ function(object)
         return(invisible(object))    
     }
 })
-
-# Display information about a raster band
-# 
-# @param object a raster band
-# 
-# @seealso \code{\link{show}}
-# 
-# @examples
-# f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
-# x = openGDALBand(f)
-# show(x)
-#
-# @aliases show-band
-# @export 
 
 setMethod('show',
 signature('RGDAL2RasterBand'),
@@ -469,9 +434,9 @@ setMethod('dim',
 signature('RGDAL2Dataset'),
 function(x)
 {
-    num_rows = GDALGetRasterYSize(x@handle)
-    num_cols = GDALGetRasterXSize(x@handle)
-    num_bands = GDALGetRasterCount(x@handle)
+    num_rows = RGDAL_GetRasterYSize(x@handle)
+    num_cols = RGDAL_GetRasterXSize(x@handle)
+    num_bands = RGDAL_GetRasterCount(x@handle)
     c(num_rows, num_cols, num_bands)
 })
 
@@ -492,8 +457,8 @@ setMethod('dim',
 signature('RGDAL2RasterBand'),
 function(x)
 {
-    num_rows = GDALGetRasterBandYSize(x@handle)
-    num_cols = GDALGetRasterBandXSize(x@handle)
+    num_rows = RGDAL_GetRasterBandYSize(x@handle)
+    num_cols = RGDAL_GetRasterBandXSize(x@handle)
     c(num_rows, num_cols)
 })
 
@@ -541,17 +506,18 @@ nband = function(x)
 getBlockSize = function(x)
 {
     x = checkBand(x)
-    res = GDALGetBlockSize(x@handle)
+    res = RGDAL_GetBlockSize(x@handle)
     res
 }
 
 #' Extract data from a raster band
 #' 
-#' Use R-style semantics to read data from a raster band
+#' Use R-style syntax to read data from a raster band
 #' 
 #' @param x a raster band
 #' @param i the row indices
 #' @param j the column indicies
+#' @param ... additional arguments (see details)
 #' @param drop if true (default), drop singleton dimensions
 #' 
 #' @details
@@ -563,16 +529,6 @@ getBlockSize = function(x)
 #' or \code{j} are missing, they assume the values \code{1:nrow(x)} and
 #' \code{1:ncol(x)} respectively.
 #' 
-#' There are several other arguments available that cannot be documented
-#' in the normal way because of the overly pedantic behavior of R CMD check.
-#' These are:
-#' 
-#' \tabular{ll}{
-#' \code{ii} \tab row subsetting indicies \cr
-#' \code{jj} \tab column subsetting indicies \cr
-#' \code{use.mask} \tab if true (default), set invalid data to \code{NA}
-#' }
-#' 
 #' The subsampling indices \code{ii} and \code{jj} can be used to subsample
 #' the extracted data. The output matrix will have \code{length(ii)} rows and
 #' \code{length(jj)} columns. If the number of elements of \code{ii} (\code{jj})
@@ -582,17 +538,20 @@ getBlockSize = function(x)
 #' whenever the subsampling indices are applied, the minimum value is subtracted
 #' so that \code{ii = 1:3} is equivalent to \code{ii = 101:103}.
 #' 
+#' If \code{use.mask} is set to \code{FALSE}, then all data will be read. Otherwise
+#' data values where the mask is false will be returned as \code{NA}.
+#' 
 #' As a special case, \code{i} may be given as a geometry. The extent of the
 #' geometry will be extracted and used to subset the raster data. The geometry
 #' will be reprojected to match the spatial reference system  of the dataset.
 #' This can be combined with the \code{ii} and \code{jj} parameters.
 #' 
 #' Data are always returned as R type \code{numeric}. The functions
-#' \code{\link{readBlock}} and \code{\link{writeBlock}} are faster and will
-#' return raw bytes, integer or numeric values depending on the type
+#' \code{\link{read-block-matrix}} and \code{\link{read-block-matrix}} are faster
+#' and will return raw bytes, integer or numeric values depending on the type
 #' of data stored in the band. 
 #' 
-#' @seealso \code{\link{readBlock}}
+#' @seealso \code{\link{read-block-matrix}}
 #' 
 #' @examples
 #' x = newGDALBand(5, 5)
@@ -607,7 +566,6 @@ getBlockSize = function(x)
 #' show(e)
 #' x[e]
 #'
-#' @name [,RGDAL2RasterBand
 #' @aliases [,band
 #' @rdname sub-band
 #' @export
@@ -642,7 +600,7 @@ setMethod('[',
 signature('RGDAL2RasterBand', 'missing', 'numeric'),
 function(x, i, j, ..., drop = TRUE)
 {
-  readRasterBand(x, 1L:nrow(x), j, ..., drop = drop)
+  readRasterBand(x, 1L:nrow(x), ..., drop = drop)
 })
 
 #' @rdname sub-band
@@ -685,45 +643,54 @@ function(x, i, j, ..., drop = TRUE)
 #' x[[e]]
 #' 
 #' @aliases [[,band
+#' @rdname copy-band-subset
 #' @export
 setMethod('[[', 
 signature('RGDAL2RasterBand', 'numeric', 'numeric'),
-function(x, i, j, ...)
+function(x, i, j)
 {
   res = RGDAL_CopySubset(x@handle, min(j) - 1, min(i) - 1, length(j), length(i))
   getBand(newRGDAL2Dataset(res))
 })
 
+#' @rdname copy-band-subset
+#' @export
 setMethod('[[', 
 signature('RGDAL2RasterBand', 'missing', 'missing'),
-function(x, i, j, ...)
+function(x, i, j)
 {
     i = 1L:nrow(x); j = 1L:ncol(x)
     res = RGDAL_CopySubset(x@handle, min(j) - 1, min(i) - 1, length(j), length(i))
     getBand(newRGDAL2Dataset(res))
 })
 
+#' @rdname copy-band-subset
+#' @export
 setMethod('[[', 
 signature('RGDAL2RasterBand', 'numeric', 'missing'),
-function(x, i, j, ...)
+function(x, i, j)
 {
     j = 1L:ncol(x)
     res = RGDAL_CopySubset(x@handle, min(j) - 1, min(i) - 1, length(j), length(i))
     getBand(newRGDAL2Dataset(res))
 })
 
+#' @rdname copy-band-subset
+#' @export
 setMethod('[[', 
 signature('RGDAL2RasterBand', 'missing', 'numeric'),
-function(x, i, j, ..., drop = TRUE)
+function(x, i, j)
 {
     i = 1L:nrow(x)
     res = RGDAL_CopySubset(x@handle, min(j) - 1, min(i) - 1, length(j), length(i))
     getBand(newRGDAL2Dataset(res))
 })
 
+#' @rdname copy-band-subset
+#' @export
 setMethod('[[',
 signature('RGDAL2RasterBand', 'RGDAL2Geometry'),
-function(x, i, j, ...)
+function(x, i)
 {
     ij = region2Indices(x, i)
     xoff = floor(min(ij$j) - 1); yoff = floor(min(ij$i) - 1)
@@ -739,7 +706,7 @@ function(x, i, j, ...)
 #' @param x a raster band
 #' @param i the row indices
 #' @param j the column indicies
-#' @param native.indexing if true, use R indexing (see details)
+#' @param ... optional arguments (see details)
 #' @param value the data to write
 #' 
 #' @details
@@ -753,6 +720,10 @@ function(x, i, j, ...)
 #' and the matrix written back to the band. This will be slower, but allows one
 #' to write to non-contiguous indexes as in R. There is a performance penalty
 #' as the data block needs to be read and written back to the band.
+#' 
+#' If the subsetting indices \code{ii} or \code{jj} are set and \code{native.indexing}
+#' is false, then their range of values will be interpreted as the matrix dimensions of
+#' \code{value}. When \code{native.indexing} is true, these arguments are ignored.
 #' 
 #' This method of writting data is much slower than \code{\link{write-block-matrix}}
 #' but will automatically cast the data to the correct type unlike \code{\link{write-block-matrix}}
@@ -768,8 +739,8 @@ function(x, i, j, ...)
 #' x[] = 1; x[]
 #' x[c(2, 4), c(2, 4)] = 2:10; x[]; x[] = 1
 #' x[c(2, 4), c(2, 4), native.indexing = TRUE] = 2:5; x[]
+#' x[ii = 1:3, jj = 1:3] = 1:9; x[]
 #'
-#' @name [<-,RGDAL2RasterBand
 #' @aliases [<-,band
 #' @rdname write-band
 #' @export
@@ -838,6 +809,32 @@ function(object)
     extent(object@dataset)
 })
 
+#' Simple raster warping
+#' 
+#' Reproject a raster object
+#' 
+#' @param object the raster object (dataset or band)
+#' @param SRS the new spatial reference system
+#' @param file the output filed (ignored if \code{driver = "MEM"})
+#' @param thresh resampling threshold
+#' 
+#' @details
+#' This function calls a modified version of the GDAL warpsimple utility.
+#' 
+#' If \code{object} is a raster band, the entire dataset will be warped
+#' and the first band of the dataset returned. See \code{\link{getDataset}}.
+#' 
+#' @examples
+#' f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
+#' x = openGDAL(f)
+#' show(grid.layout(1, 2))
+#' draw(x)
+#' y = reproject(x, newSRS("WGS84"))
+#' draw(y)
+#' 
+#' @aliases reproject-dataset
+#' @rdname reproject-raster
+#' @export
 setMethod("reproject",
 signature("RGDAL2Dataset"),
 function(object, SRS, file = tempfile(), driver = "MEM", thresh = 0.125)
@@ -847,6 +844,9 @@ function(object, SRS, file = tempfile(), driver = "MEM", thresh = 0.125)
     newRGDAL2Dataset(res)
 })
 
+#' @aliases reproject-band
+#' @rdname reproject-raster
+#' @export
 setMethod("reproject", "RGDAL2RasterBand",
 function(object, SRS, file = tempfile(), driver = "MEM", thresh = 0.125)
 {
@@ -897,11 +897,15 @@ function(object, SRS, file = tempfile(), driver = "MEM", thresh = 0.125)
 #' f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
 #' x = openGDAL(f)
 #' dim(x)
+#' m = getBlockMatrix(x)
+#' dim(m)
+#' dim(m[[1, 1]])
 #' y = copyDataset(x)  # currently does not set block size
 #' m = getBlockMatrix(y)
 #' dim(m)
 #' dim(m[[1, 1]])
 #' z = m[[1, 1]]
+#' class(z)
 #' z[] = 42L
 #' m[[1, 1]] = z
 #' m[[1, 1]][1, 1]
@@ -922,7 +926,7 @@ getBlockMatrix = function(b)
 #' @export
 setMethod('[[',
 signature('RGDAL2BlockMatrix'),
-function(x, i, j, ...)
+function(x, i, j)
 {
   RGDAL_ReadBlock(x@band@handle, i, j)
 })
@@ -933,7 +937,7 @@ function(x, i, j, ...)
 #' @export
 setMethod('[[<-',
 signature('RGDAL2BlockMatrix'),
-function(x, i, j, ..., value)
+function(x, i, j, value)
 {
   if ( RGDAL_WriteBlock(x@band@handle, i, j, value) )
     stop("Error writing block")

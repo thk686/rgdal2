@@ -17,7 +17,7 @@ newRGDAL2SQLLayer = function(handle, datasource, sql)
 {
     if ( is.null(handle) ) return(NULL)
     f = function(lyrExtPtr)
-      RGDAL_OGR_DS_ReleaseResultSet(datasource@handle, lyrExtPtr)
+      RGDAL_DS_ReleaseResultSet(datasource@handle, lyrExtPtr)
     reg.finalizer(handle, f, TRUE)
     new("RGDAL2SQLLayer", handle = handle, datasource = datasource, sql = sql)
 }
@@ -33,7 +33,7 @@ newRGDAL2Feature = function(handle, layer)
 newRGDAL2Geometry = function(handle)
 {
     if ( is.null(handle) ) return(NULL)
-    reg.finalizer(handle, function(x) RGDAL_OGR_G_DestroyGeometry(x))
+    reg.finalizer(handle, function(x) RGDAL_G_DestroyGeometry(x))
     new("RGDAL2Geometry", handle = handle)
 }
 
@@ -46,9 +46,9 @@ getLayer = function(x, layer = 1L)
 {
     assertClass(x, "RGDAL2Datasource")
     lyr = if ( is.character(layer) )
-            RGDAL_OGR_DS_GetLayerByName(x@handle, layer)
+            RGDAL_DS_GetLayerByName(x@handle, layer)
           else
-            RGDAL_OGR_DS_GetLayer(x@handle, layer - 1)
+            RGDAL_DS_GetLayer(x@handle, layer - 1)
     newRGDAL2Layer(lyr, x)
 }
 
@@ -66,7 +66,7 @@ setMethod("testCapability", "RGDAL2Datasource",
                         create.layer = 'ODsCCreateLayer',
                         delete.layer = 'ODsCDeleteLayer',
                         create.geom.field = 'ODsCCreateGeomFieldAfterCreateLayer')
-    RGDAL_OGR_DS_TestCapability(object@handle, capability) == 1;
+    RGDAL_DS_TestCapability(object@handle, capability) == 1;
 })
 
 setMethod("testCapability", "RGDAL2Layer",
@@ -101,7 +101,7 @@ setMethod("testCapability", "RGDAL2Layer",
                         alter.field.defn = "AlterFieldDefn",
                         delete.feature = "DeleteFeature",
                         transactions = "Transactions")
-    RGDAL_OGR_L_TestCapability(object@handle, capability) == 1;
+    RGDAL_L_TestCapability(object@handle, capability) == 1;
 })
 
 drawPolygonGeom = function(x, ...)
@@ -119,7 +119,7 @@ drawPolygonGeom = function(x, ...)
 
 get.plot.fun = function(geom)
 {
-    switch(RGDAL_OGR_G_GetGeometryType(geom@handle),
+    switch(RGDAL_G_GetGeometryType(geom@handle),
            POINT = points,
            MULTIPOINT = points,
            LINESTRING = lines,
@@ -186,7 +186,7 @@ addPointsFromList = function(x, points)
         yy = as.double(points$y)
         lapply(seq(along = xx), function(i)
         {
-            RGDAL_OGR_G_AddPoint_2D(x@handle, xx[i], yy[i])
+            RGDAL_G_AddPoint_2D(x@handle, xx[i], yy[i])
         })
         return(invisible(x))
     }
@@ -208,9 +208,9 @@ addRingToPolygon = function(x, points)
 {
     ring = newGeometry('LINEARRING')
     addPointsFromList(ring, points)
-    if ( RGDAL_OGR_G_AddGeometry(x@handle, ring@handle) )
+    if ( RGDAL_G_AddGeometry(x@handle, ring@handle) )
         stop("Error adding points")
-    RGDAL_OGR_G_CloseRings(x@handle)
+    RGDAL_G_CloseRings(x@handle)
     invisible(x)
 }
 

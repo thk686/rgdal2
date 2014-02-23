@@ -37,12 +37,14 @@ readRasterBand = function(x, i, j, ii = i, jj = j, drop = TRUE, use.mask = TRUE)
     nColsIn = diff(range(j)) + 1L
     nRowsOut = diff(range(ii)) + 1L
     nColsOut = diff(range(jj)) + 1L
-    res = readRasterData(x@handle, min(j) - 1L, min(i) - 1L, nColsIn, nRowsIn, nColsOut, nRowsOut)
+    res = RGDAL_ReadRasterData(x@handle, min(j) - 1L, min(i) - 1L,
+                               nColsIn, nRowsIn, nColsOut, nRowsOut)
     res = res[ii - min(ii) + 1L, jj - min(jj) + 1L, drop = FALSE]
-    if ( use.mask && bitwAnd(RGDAL_GDALGetMaskFlags(x@handle), 8L) )
+    if ( use.mask && bitwAnd(RGDAL_GetMaskFlags(x@handle), 8L) )
     {
-        mh = RGDAL_GDALGetMaskBand(x@handle)
-        mv = readRasterData(mh, min(j) - 1L, min(i) - 1L, nColsIn, nRowsIn, nColsOut, nRowsOut)
+        mh = RGDAL_GetMaskBand(x@handle)
+        mv = RGDAL_ReadRasterData(mh, min(j) - 1L, min(i) - 1L,
+                                  nColsIn, nRowsIn, nColsOut, nRowsOut)
         mv = mv[ii - min(ii) + 1L, jj - min(jj) + 1L, drop = FALSE]
         res[mv == 0] = NA
     }
@@ -66,7 +68,7 @@ writeRasterBand = function(x, i, j, ii = i, jj = j, native.indexing = FALSE, val
         {
             value = matrix(value, diff(range(ii)) + 1L, diff(range(jj)) + 1L)
         }
-        writeRasterData(x@handle, value, min(j) - 1L, min(i) - 1L, nColsOut, nRowsOut)
+        RGDAL_writeRasterData(x@handle, value, min(j) - 1L, min(i) - 1L, nColsOut, nRowsOut)
     }
     invisible(x)      
 }
