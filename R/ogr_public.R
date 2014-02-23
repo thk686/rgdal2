@@ -19,11 +19,11 @@
 #' x = openOGR(f)
 #' show(x)
 #' 
-#' @family ogr-io
 #' @export
 openOGR = function(fname, readonly = TRUE)
 {
-    x = RGDAL_Open(fname, readonly)
+    x = RGDAL_OGROpen(fname, readonly)
+    if ( is.null(x) ) stop("Unable to open file")
     newRGDAL2Datasource(x)
 }
 
@@ -44,7 +44,6 @@ openOGR = function(fname, readonly = TRUE)
 #' x = newOGRDatasource()
 #' show(x)
 #' 
-#' @family ogr-io
 #' @export
 newOGRDatasource = function(driver = "MEM", fname = tempfile())
 {

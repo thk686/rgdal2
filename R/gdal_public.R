@@ -145,8 +145,7 @@ copyDataset = function(x, file = tempfile(), driver = "MEM")
 #' x = openGDAL(f)
 #' getTransform(x)
 #' 
-#' @seealso \code{\link{setTransform}}
-#' 
+#' @rdname get-set-transform
 #' @export
 getTransform = function(object)
 {
@@ -162,7 +161,6 @@ getTransform = function(object)
 #' allow projection from pixel, scan-line (row, column) indices to
 #' geospatial coordinates.
 #' 
-#' @param object a dataset or raster band
 #' @param transform a list a returned by \code{\link{getTransform}}
 #' 
 #' @return the dataset invisibly
@@ -174,8 +172,7 @@ getTransform = function(object)
 #' setTransform(y, getTransform(x))
 #' getTransform(y)
 #' 
-#' @seealso \code{\link{getTransform}}
-#' 
+#' @rdname get-set-transform
 #' @export
 setTransform = function(object, transform)
 {
@@ -207,8 +204,7 @@ setTransform = function(object, transform)
 #' copyTransform(x, y)
 #' getTransform(y)
 #' 
-#' @seealso \code{\link{setTransform}}
-#' 
+#' @rdname get-set-transform
 #' @export
 copyTransform = function(obj1, obj2)
 {
@@ -429,6 +425,7 @@ function(object)
 #' dim(x)
 #'
 #' @aliases dim-dataset
+#' @rdname dim-band-dataset
 #' @export
 setMethod('dim',
 signature('RGDAL2Dataset'),
@@ -442,8 +439,6 @@ function(x)
 
 #' Return dimensions of a band
 #' 
-#' @param x a dataset
-#' 
 #' @seealso \code{\link{dim}}
 #' 
 #' @examples
@@ -452,6 +447,7 @@ function(x)
 #' dim(x)
 #'
 #' @aliases dim-band
+#' @rdname dim-band-dataset
 #' @export
 setMethod('dim',
 signature('RGDAL2RasterBand'),
@@ -464,8 +460,6 @@ function(x)
 
 #' Return number of raster bands in a dataset
 #' 
-#' @param x a dataset
-#' 
 #' @seealso \code{\link{dim}}
 #' 
 #' @examples
@@ -473,6 +467,7 @@ function(x)
 #' x = openGDAL(f)
 #' nband(x)
 #'
+#' @rdname dim-band-dataset
 #' @export
 nband = function(x)
 {

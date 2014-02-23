@@ -4,7 +4,8 @@
 
 newRGDAL2Datasource = function(handle)
 {
-    reg.finalizer(handle, RGDAL_OGRReleaseDataSource, TRUE)
+    if ( is.null(handle) ) return(NULL)
+    reg.finalizer(handle, RGDAL_ReleaseDataSource, TRUE)
     new("RGDAL2Datasource", handle = handle)
 }
 

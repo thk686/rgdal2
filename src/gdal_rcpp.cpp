@@ -71,8 +71,7 @@ DatasetH RGDAL_Open(const char* file,
                     bool shared = true)
 {
   GDALAccess access = readonly ? GA_ReadOnly : GA_Update;
-  GDALDatasetH h = shared ? GDALOpenShared(file, access) : GDALOpen(file, access);
-  return DatasetH(h);
+  return shared ? GDALOpenShared(file, access) : GDALOpen(file, access);
 }
 
 // [[Rcpp::export]]
@@ -1012,3 +1011,11 @@ DatasetH RGDAL_RasterWarp(DatasetH h, const char* file, const char* srs,
 {
   return RGDAL_RasterWarp_Internal(*h, file, srs, driver, err);
 }
+
+// [[Rcpp::export]]
+const char* RGDAL_GetDSDriverName(DatasourceH h)
+{
+    OGRSFDriverH hDr = OGR_DS_GetDriver(*h);
+    return OGR_Dr_GetName(hDr);
+}
+
