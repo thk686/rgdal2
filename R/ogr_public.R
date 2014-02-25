@@ -540,7 +540,7 @@ getGeometries = function(x)
     geomvec = RGDAL_GetGeometries(x@handle)
     res = lapply(1:length(geomvec), function(i)
     {
-        newRGDAL2LayerGeometry(geomvec[[i]], x)
+        newRGDAL2Geometry(geomvec[[i]], x)
     })
     unlist(res)
 }

@@ -686,13 +686,13 @@ SEXP RGDAL_GetFIDs(LayerH h)
 // [[Rcpp::export]]
 FeatureH RGDAL_GetFeature(LayerH h, double index)
 {
-    return OGR_L_GetFeature(*h, (long) index);
+    return OGR_F_Clone(OGR_L_GetFeature(*h, (long) index));
 }
 
 // [[Rcpp::export]]
 GeometryH RGDAL_F_GetGeometryRef(FeatureH h)
 {
-  return OGR_F_GetGeometryRef(*h);
+  return OGR_G_Clone(OGR_F_GetGeometryRef(*h));
 }
 
 // [[Rcpp::export]]
@@ -727,7 +727,7 @@ static OGRwkbGeometryType typeFromName(std::string name)
 // [[Rcpp::export]]
 FeatureH RGDAL_L_GetNextFeature(LayerH h)
 {
-  return OGR_L_GetNextFeature(*h);
+  return OGR_F_Clone(OGR_L_GetNextFeature(*h));
 }
 
 // [[Rcpp::export]]
@@ -811,7 +811,7 @@ SEXP RGDAL_GetGeometries(LayerH h)
     for ( size_t i = 0; i != n; ++i )
     {
         OGRFeatureH hF = OGR_L_GetNextFeature(*h);
-        OGRGeometryH hG = OGR_F_GetGeometryRef(hF);
+        OGRGeometryH hG = OGR_G_Clone(OGR_F_GetGeometryRef(hF));
         SEXP geomPtr = PROTECT(R_MakeExternalPtr((void*) hG, R_NilValue, R_NilValue));
         SET_VECTOR_ELT(res, i, geomPtr);                                
     }
@@ -1142,4 +1142,10 @@ GeometryH RGDAL_G_SimplifyPreserveTopology(GeometryH g, double tol)
 GeometryH RGDAL_G_Polygonize(GeometryH g)
 {
   return OGR_G_Polygonize(*g);
+}
+
+// [[Rcpp::export]]
+void RGDAL_F_Destroy(FeatureH h)
+{
+  OGR_F_Destroy(*h);
 }

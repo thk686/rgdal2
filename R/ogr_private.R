@@ -38,11 +38,6 @@ newRGDAL2Geometry = function(handle)
     new("RGDAL2Geometry", handle = handle)
 }
 
-newRGDAL2LayerGeometry = function(handle, layer)
-{
-    new("RGDAL2LayerGeometry", handle = handle, layer = layer)
-}
-
 getLayer = function(x, layer = 1L)
 {
     assertClass(x, "RGDAL2Datasource")
