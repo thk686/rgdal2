@@ -9,7 +9,7 @@ class RGDALHandleWrapper
 {
 public:
   RGDALHandleWrapper(void* h)
-  : handle(h) {}
+  : handle(h) {}  // If initialized NULL will return NULL SEXP
   RGDALHandleWrapper(const SEXP h)
   : handle(R_ExternalPtrAddr(h))
   {
@@ -17,7 +17,7 @@ public:
   }
   operator SEXP() const
   {
-    return handle ?
+    return handle ?  // Return NULL on NULL pointer
       R_MakeExternalPtr(handle, R_NilValue, R_NilValue) :
       R_NilValue;
   }

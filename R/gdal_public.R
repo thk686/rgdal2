@@ -68,7 +68,7 @@ openGDALBand = function(fname, band = 1L, readonly = TRUE)
 #' be created on disk, but the underlying file will be unlinked. This may be useful
 #' for dealing with huge temporary datasets beyond memory capacity. Once a dataset
 #' is closed (this will happen automatically if the dataset object goes out of scope),
-#'  all data will be lost unless the dataset is copied to another file-based dataset. 
+#' all data will be lost unless the dataset is copied to another file-based dataset. 
 #' 
 #' The data type is given as a string, and can be one of Byte, Int16, Int32,
 #' Float32, Float64. These strings are the same as the GDALDataType enum in the GDAL
@@ -76,6 +76,8 @@ openGDALBand = function(fname, band = 1L, readonly = TRUE)
 #' support. See \url{http://www.gdal.org} for more information.
 #' 
 #' @return an object of class RGDAL2Dataset
+#' 
+#' @note Be careful not to unlink an existing file.
 #' 
 #' @seealso \code{\link{copyDataset}}
 #' 
@@ -1066,5 +1068,4 @@ foreach.tile = function(x,
   args[['.inorder']] = inorder
   do.call('foreach', args)
 }
-
 
