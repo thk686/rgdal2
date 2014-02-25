@@ -947,8 +947,9 @@ function(object)
 #' 
 #' @examples
 #' x = c(0, 0, 1, 1)
-#' x1 = newGeometry("POLYGON", list(x = c(0, 0, 1, 1), y = c(0, 1, 1, 0)))
-#' x2 = newGeometry("POLYGON", list(x = c(0, 0, 1, 1) + 0.5, y = c(0, 1, 1, 0) + 0.5))
+#' y = c(0, 1, 1, 0)
+#' x1 = newGeometry("POLYGON", list(x = x, y = y))
+#' x2 = newGeometry("POLYGON", list(x = x + 0.5, y = y + 0.5))
 #' 
 #' x1 %intersects% x2
 #' x1 %equals% x2
@@ -958,22 +959,32 @@ function(object)
 #' x1 %within% x2
 #' x1 %contains% x2
 #' x1 %overlaps% x2
+#' 
+#' x1 %distance% x2 
+#' 
 #' x3 = x1 %union% x2
-#' draw(x3)
-#' draw(x1, gp = gpar(lty = 2), overlay = TRUE)
-#' draw(x2, gp = gpar(lty = 2), overlay = TRUE)
+#' 
+#' gp1 = gpar(lwd = 6, lty = 2, col = rgb(1, 0, 0, 0.5), fill = NA)
+#' gp2 = gpar(lwd = 6, lty = 2, col = rgb(0, 1, 0, 0.5), fill = NA)
+#' gp3 = gpar(lwd = 6, col = rgb(0, 0, 1, 0.5), fill = NA)
+#' roi = extent(x1 %union% x2)
+#' 
+#' draw(x1, region = roi, gp = gp1)
+#' draw(x2, gp = gp2, overlay = TRUE)
+#' draw(x3,  gp = gp3, overlay = TRUE)
+#' grid.text("union")
 #' 
 #' x3 = x1 %difference% x2
-#' draw(x3)
-#' draw(x1, gp = gpar(lty = 2), overlay = TRUE)
-#' draw(x2, gp = gpar(lty = 2), overlay = TRUE)
+#' draw(x1, region = roi, gp = gp1)
+#' draw(x2, gp = gp2, overlay = TRUE)
+#' draw(x3,  gp = gp3, overlay = TRUE)
+#' grid.text("difference")
 #' 
 #' x3 = x1 %symdiff% x2
-#' draw(x3)
-#' draw(x1, gp = gpar(lty = 2), overlay = TRUE)
-#' draw(x2, gp = gpar(lty = 2), overlay = TRUE)
-#' 
-#' x1 %distance% x2
+#' draw(x1, region = roi, gp = gp1)
+#' draw(x2, gp = gp2, overlay = TRUE)
+#' draw(x3,  gp = gp3, overlay = TRUE)
+#' grid.text("symmetric difference")
 #' 
 #' @aliases geometry-binary-ops
 #' @rdname geometry-binary
@@ -1107,13 +1118,25 @@ function(object)
 #' These mirror the equivalent functions in OGR. See
 #' \url{http://www.gdal.org/} for more information.
 #' 
-#' @aliases geometry-unary
+#' @examples
+#' x = newGeometry("MULTIPOINT", list(x = rnorm(100), y = rnorm(100)))
+#' y = convexHull(x)
+#' draw(y); draw(x, overlay = T)
+#' centroid(y)
+#' boundary(y)
+#' unionCascaded(y)
+#' lineLength(newGeometry("LINESTRING", list(x = c(0, 1), y = c(0, 1))))
+#' area(y)
+#' simplify(y, 0.25)
+#' polygonize(x)
+#' 
+#' @aliases geometry-unary-ops
 #' @rdname geometry-unary
 #' @export
 centroid = function(object)
 {
   assertClass(object, "RGDAL2Geometry")
-  res = newGeometry("wkbPoint")
+  res = newGeometry("POINT", SRS = getSRS(object))
   if ( RGDAL_G_Centroid(object@handle, res@handle) )
     stop("Error computing centroid")
   res
@@ -1125,7 +1148,9 @@ boundary = function(object)
 {
     assertClass(object, "RGDAL2Geometry")
     res = RGDAL_G_Boundary(object@handle)
-    newRGDAL2Geometry(res)
+    res = newRGDAL2Geometry(res)
+    setSRS(res, getSRS(object))
+    res
 }
 
 #' @rdname geometry-unary
@@ -1134,7 +1159,9 @@ convexHull = function(object)
 {
     assertClass(object, "RGDAL2Geometry")
     res = RGDAL_G_ConvexHull(object@handle)
-    newRGDAL2Geometry(res)
+    res = newRGDAL2Geometry(res)
+    setSRS(res, getSRS(object))
+    res
 }
 
 #' @rdname geometry-unary
@@ -1143,7 +1170,9 @@ unionCascaded = function(object)
 {
     assertClass(object, "RGDAL2Geometry")
     res = RGDAL_G_UnionCascaded(object@handle)
-    newRGDAL2Geometry(res)
+    res = newRGDAL2Geometry(res)
+    setSRS(res, getSRS(object))
+    res
 }
 
 #' @rdname geometry-unary
@@ -1173,9 +1202,9 @@ simplify = function(object, tolerance, preserve.topology = TRUE)
             RGDAL_G_SimplifyPreserveTopology(object@handle, tolerance)
         else
             RGDAL_G_Simplify(object@handle, tolerance)
-   res = newRGDAL2Geometry(x)
-   setSRS(res, getSRS(object))
-   res
+   x = newRGDAL2Geometry(x)
+   setSRS(x, getSRS(object))
+   x
 }
 
 #' @rdname geometry-unary
@@ -1184,10 +1213,9 @@ polygonize = function(object)
 {
     assertClass(object, "RGDAL2Geometry")
     x = RGDAL_G_Polygonize(object@handle)
-    res = newRGDAL2Geometry(x)
-    if ( !is.null(res) )
-        setSRS(res, getSRS(object))
-    res
+    x = newRGDAL2Geometry(x)
+    setSRS(x, getSRS(object))
+    x
 }
 
 #' Generate an extent object
@@ -1208,8 +1236,8 @@ polygonize = function(object)
 #' @export
 makeExtent = function(xmin = 0, xmax = 1, ymin = 0, ymax = 1, SRS = NULL)
 {
-  res = RGDAL_MakeExtent(xmin, xmax, ymin, ymax)
-  res = newRGDAL2Geometry(res)
+  env = RGDAL_MakeExtent(xmin, xmax, ymin, ymax)
+  res = newRGDAL2Geometry(env)
   if ( !is.null(SRS) ) setSRS(res, SRS)
   res
 }
@@ -1223,12 +1251,13 @@ function(object)
   {
     xmin = min(object$x)
     xmax = max(object$x)
-    ymin = min(object$x)
-    ymax = max(object$x)
+    ymin = min(object$y)
+    ymax = max(object$y)
     res = newGeometry('POLYGON')
     addPoints(res, list(x = c(xmin, xmin, xmax, xmax),
                         y = c(ymin, ymax, ymax, ymin)))
     res = newRGDAL2Geometry(res)
+    setSRS(res, getSRS(object))
     return(res)
   }
   else

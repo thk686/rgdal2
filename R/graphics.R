@@ -41,8 +41,8 @@ geometryGrob = function(object, ..., units = "native")
            MULTILINESTRING25D = multiLineGrob(points, default.units = units, ...),
            POLYGON25D = multiPolygonGrob(points, default.units = units, ...),
            MULTIPOLYGON25D = multiPolygonGrob(points, default.units = units, ...),
-           MULTIPOINT = pointsGrob(points$x, points$y, default.units = units, ...),
-           MULTIPOINT25D = pointsGrob(points$x, points$y, default.units = units, ...),
+           MULTIPOINT = multiPointsGrob(points, default.units = units, ...),
+           MULTIPOINT25D = multiPointsGrob(points$x, points$y, default.units = units, ...),
            stop("Conversion to grid object not implemented"))
 }
 

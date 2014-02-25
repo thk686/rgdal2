@@ -5,47 +5,20 @@
 
 using namespace Rcpp;
 
-//
-// I am trying to stick to the GDAL public interface,
-// so these need to be defined solely to have a type
-// for the XPtr template, and for readability.
-//
-class GDALDataset;
-class GDALRasterBand;
-class OGRDataSource;
-class OGRLayer;
-class OGRGeometry;
-class OGRSpatialReference;
-class OGRFeature;
-
-template<class T>
-SEXP wrapHandle(void* x)
-{
-  if ( !x ) stop("Attempt to wrap null handle\n");
-  return XPtr<T>((T*) x, false);
-}
-
-template<class T>
-void* unwrapHandle(SEXP x)
-{
-  XPtr<T> y(x);
-  void* z = (void*) &*y;
-  if ( !z ) stop("Attempt to unwrap null handle\n");
-  return z;
-}
-
-template<class T>
-class RGDALHandle
+class RGDALHandleWrapper
 {
 public:
-  RGDALHandle(void* h)
+  RGDALHandleWrapper(void* h)
   : handle(h) {}
-  RGDALHandle(const SEXP h)
-  : handle(unwrapHandle<T>(h)) {}
+  RGDALHandleWrapper(const SEXP h)
+  : handle(R_ExternalPtrAddr(h))
+  {
+    if ( !handle ) stop("Null pointer passed to function\n");
+  }
   operator SEXP() const
   {
     return handle ?
-      wrapHandle<T>(handle) :
+      R_MakeExternalPtr(handle, R_NilValue, R_NilValue) :
       R_NilValue;
   }
   void* operator*() const { return handle; }
@@ -53,12 +26,12 @@ private:
   void* handle;
 };
 
-typedef RGDALHandle<GDALDataset> DatasetH;
-typedef RGDALHandle<GDALRasterBand> BandH;
-typedef RGDALHandle<OGRDataSource> DatasourceH;
-typedef RGDALHandle<OGRLayer> LayerH;
-typedef RGDALHandle<OGRGeometry> GeometryH;
-typedef RGDALHandle<OGRSpatialReference> SpRefSysH;
-typedef RGDALHandle<OGRFeature> FeatureH;
+typedef RGDALHandleWrapper DatasetH;
+typedef RGDALHandleWrapper BandH;
+typedef RGDALHandleWrapper DatasourceH;
+typedef RGDALHandleWrapper LayerH;
+typedef RGDALHandleWrapper GeometryH;
+typedef RGDALHandleWrapper SpRefSysH;
+typedef RGDALHandleWrapper FeatureH;
 
 #endif // __RGDAL2_H__

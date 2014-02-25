@@ -249,7 +249,7 @@ accumPointsFromList = function(x, points)
 
 addPointToMultiPoint = function(x, points)
 {
-    pt = newGeometry("wkbPoint")
+    pt = newGeometry("POINT")
     if ( is3DPointList(points) )
         for ( i in 1:length(points$x) )
         {
@@ -265,7 +265,7 @@ addPointToMultiPoint = function(x, points)
                                y = points$y[i]))
             addGeometry(x, pt)
         }
-    OGR_G_DestroyGeometry(pt@handle)
+    RGDAL_G_DestroyGeometry(pt@handle)
     invisible(x)
 }
     
@@ -295,6 +295,12 @@ multiLineGrob = function(x, ...)
         x = collapsePointList(x)
         polylineGrob(x$x, x$y, id.lengths = id.lens, ...)
     }
+}
+
+multiPointsGrob = function(points, ...)
+{
+  points = collapsePointList(points)
+  pointsGrob(points$x, points$y, ...)
 }
 
 getPointListLengths = function(x)

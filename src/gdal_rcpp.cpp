@@ -669,18 +669,17 @@ GeometryH RGDAL_GetGeomEnv(GeometryH h)
 }
 
 // [[Rcpp::export]]
-SEXP RGDAL_GetFIDs(SEXP lyr)
+SEXP RGDAL_GetFIDs(LayerH h)
 {
-    OGRLayerH hL = unwrapHandle<OGRLayer>(lyr);
-    OGR_L_ResetReading(hL);
-    int n = OGR_L_GetFeatureCount(hL, 1);
+    OGR_L_ResetReading(*h);
+    int n = OGR_L_GetFeatureCount(*h, 1);
     NumericVector res(n);
     for ( int i = 0; i != n; ++i )
     {
-        OGRFeatureH hF = OGR_L_GetNextFeature(hL);
+        OGRFeatureH hF = OGR_L_GetNextFeature(*h);
         res[i] = (double) OGR_F_GetFID(hF);
     }
-    OGR_L_ResetReading(hL);
+    OGR_L_ResetReading(*h);
     return res;
 }
 
@@ -1019,3 +1018,128 @@ const char* RGDAL_GetDSDriverName(DatasourceH h)
     return OGR_Dr_GetName(hDr);
 }
 
+// [[Rcpp::export]]
+int RGDAL_G_Intersects(GeometryH g1, GeometryH g2)
+{
+  return OGR_G_Intersects(*g1, *g2);
+}
+
+// [[Rcpp::export]]
+int RGDAL_G_Equals(GeometryH g1, GeometryH g2)
+{
+  return OGR_G_Equals(*g1, *g2);
+}
+
+// [[Rcpp::export]]
+int RGDAL_G_Disjoint(GeometryH g1, GeometryH g2)
+{
+  return OGR_G_Disjoint(*g1, *g2);
+}
+
+// [[Rcpp::export]]
+int RGDAL_G_Touches(GeometryH g1, GeometryH g2)
+{
+  return OGR_G_Touches(*g1, *g2);
+}
+
+// [[Rcpp::export]]
+int RGDAL_G_Crosses(GeometryH g1, GeometryH g2)
+{
+  return OGR_G_Crosses(*g1, *g2);
+}
+
+// [[Rcpp::export]]
+int RGDAL_G_Within(GeometryH g1, GeometryH g2)
+{
+  return OGR_G_Within(*g1, *g2);
+}
+
+// [[Rcpp::export]]
+int RGDAL_G_Contains(GeometryH g1, GeometryH g2)
+{
+  return OGR_G_Contains(*g1, *g2);
+}
+
+// [[Rcpp::export]]
+int RGDAL_G_Overlaps(GeometryH g1, GeometryH g2)
+{
+  return OGR_G_Overlaps(*g1, *g2);
+}
+
+// [[Rcpp::export]]
+GeometryH RGDAL_G_Union(GeometryH g1, GeometryH g2)
+{
+  return OGR_G_Union(*g1, *g2);
+}
+
+// [[Rcpp::export]]
+GeometryH RGDAL_G_Difference(GeometryH g1, GeometryH g2)
+{
+  return OGR_G_Difference(*g1, *g2);
+}
+
+// [[Rcpp::export]]
+GeometryH RGDAL_G_SymDifference(GeometryH g1, GeometryH g2)
+{
+  return OGR_G_SymDifference(*g1, *g2);
+}
+
+// [[Rcpp::export]]
+double RGDAL_G_Distance(GeometryH g1, GeometryH g2)
+{
+  return OGR_G_Distance(*g1, *g2);
+}
+
+// [[Rcpp::export]]
+int RGDAL_G_Centroid(GeometryH g1, GeometryH g2)
+{
+  return OGR_G_Centroid(*g1, *g2);
+}
+
+// [[Rcpp::export]]
+GeometryH RGDAL_G_Boundary(GeometryH g)
+{
+  return OGR_G_Boundary(*g);
+}
+
+// [[Rcpp::export]]
+GeometryH RGDAL_G_ConvexHull(GeometryH g)
+{
+  return OGR_G_ConvexHull(*g);
+}
+
+// [[Rcpp::export]]
+GeometryH RGDAL_G_UnionCascaded(GeometryH g)
+{
+  return OGR_G_UnionCascaded(*g);
+}
+
+// [[Rcpp::export]]
+double RGDAL_G_Length(GeometryH g)
+{
+  return OGR_G_Length(*g);
+}
+
+// [[Rcpp::export]]
+double RGDAL_G_Area(GeometryH g)
+{
+  return OGR_G_Area(*g);
+}
+
+// [[Rcpp::export]]
+GeometryH RGDAL_G_Simplify(GeometryH g, double tol)
+{
+  return OGR_G_Simplify(*g, tol);
+}
+
+// [[Rcpp::export]]
+GeometryH RGDAL_G_SimplifyPreserveTopology(GeometryH g, double tol)
+{
+  return OGR_G_SimplifyPreserveTopology(*g, tol);
+}
+
+// [[Rcpp::export]]
+GeometryH RGDAL_G_Polygonize(GeometryH g)
+{
+  return OGR_G_Polygonize(*g);
+}
