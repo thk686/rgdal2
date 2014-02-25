@@ -1123,6 +1123,12 @@ function(object)
 #' y = convexHull(x)
 #' draw(y); draw(x, overlay = T)
 #' centroid(y)
+#' 
+#' xy1 = getPoints(x, TRUE)
+#' xy2 = getPoints(x, TRUE)
+#' 
+#' 
+#' 
 #' boundary(y)
 #' unionCascaded(y)
 #' lineLength(newGeometry("LINESTRING", list(x = c(0, 1), y = c(0, 1))))

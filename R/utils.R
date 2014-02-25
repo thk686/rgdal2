@@ -5,8 +5,8 @@ getConsoleLines = function(default = 40)
     if ( nchar(tput) > 0 && nchar(term) > 0 )
     {
         res = system(paste(tput, "lines"), intern = TRUE)
-        if ( is.null(attr(res, "status")) ) lines = default
-        else lines = as.integer(res)
+        if ( is.null(attr(res, "status")) ) lines = as.integer(res)
+        else lines = default
     }
     else
         lines = default
@@ -20,8 +20,8 @@ getConsoleCols = function(default = 80)
   if ( nchar(tput) > 0 && nchar(term) > 0 )
   {
     res = system(paste(tput, "cols"), intern = TRUE)
-    if ( is.null(attr(res, "status")) ) lines = default
-    else lines = as.integer(res)
+    if ( is.null(attr(res, "status")) )  lines = as.integer(res)
+    else lines = default
   }
   else
     lines = default
