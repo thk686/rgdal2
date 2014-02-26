@@ -800,7 +800,7 @@ getGeometry = function(x)
 {
     assertClass(x, "RGDAL2Feature")
     geom = RGDAL_F_GetGeometryRef(x@handle)
-    newRGDAL2LayerGeometry(geom, x@layer)
+    newRGDAL2Geometry(geom, x@layer)
 }
 
 #' Get the spatial reference system from a feature
@@ -962,13 +962,12 @@ function(object)
 #' 
 #' x1 %distance% x2 
 #' 
-#' x3 = x1 %union% x2
-#' 
 #' gp1 = gpar(lwd = 6, lty = 2, col = rgb(1, 0, 0, 0.5), fill = NA)
 #' gp2 = gpar(lwd = 6, lty = 2, col = rgb(0, 1, 0, 0.5), fill = NA)
 #' gp3 = gpar(lwd = 6, col = rgb(0, 0, 1, 0.5), fill = NA)
 #' roi = extent(x1 %union% x2)
 #' 
+#' x3 = x1 %union% x2
 #' draw(x1, region = roi, gp = gp1)
 #' draw(x2, gp = gp2, overlay = TRUE)
 #' draw(x3,  gp = gp3, overlay = TRUE)
@@ -1122,13 +1121,7 @@ function(object)
 #' x = newGeometry("MULTIPOINT", list(x = rnorm(100), y = rnorm(100)))
 #' y = convexHull(x)
 #' draw(y); draw(x, overlay = T)
-#' centroid(y)
-#' 
-#' xy1 = getPoints(x, TRUE)
-#' xy2 = getPoints(x, TRUE)
-#' 
-#' 
-#' 
+#' centroid(y) 
 #' boundary(y)
 #' unionCascaded(y)
 #' lineLength(newGeometry("LINESTRING", list(x = c(0, 1), y = c(0, 1))))
@@ -1153,8 +1146,8 @@ centroid = function(object)
 boundary = function(object)
 {
     assertClass(object, "RGDAL2Geometry")
-    res = RGDAL_G_Boundary(object@handle)
-    res = newRGDAL2Geometry(res)
+    h = RGDAL_G_Boundary(object@handle)
+    res = newRGDAL2Geometry(h)
     setSRS(res, getSRS(object))
     res
 }
@@ -1164,8 +1157,8 @@ boundary = function(object)
 convexHull = function(object)
 {
     assertClass(object, "RGDAL2Geometry")
-    res = RGDAL_G_ConvexHull(object@handle)
-    res = newRGDAL2Geometry(res)
+    h = RGDAL_G_ConvexHull(object@handle)
+    res = newRGDAL2Geometry(h)
     setSRS(res, getSRS(object))
     res
 }
@@ -1175,9 +1168,11 @@ convexHull = function(object)
 unionCascaded = function(object)
 {
     assertClass(object, "RGDAL2Geometry")
-    res = RGDAL_G_UnionCascaded(object@handle)
-    res = newRGDAL2Geometry(res)
+    mp = RGDAL_G_ForceToMultiPolygon(object@handle)
+    h = RGDAL_G_UnionCascaded(mp)
+    res = newRGDAL2Geometry(h)
     setSRS(res, getSRS(object))
+    RGDAL_G_DestroyGeometry(mp)
     res
 }
 
@@ -1203,12 +1198,12 @@ area = function(object)
 #' @export
 simplify = function(object, tolerance, preserve.topology = TRUE)
 {
-    assertClass(object, "RGDAL2Geometry")
-    x = if ( preserve.topology )
-            RGDAL_G_SimplifyPreserveTopology(object@handle, tolerance)
-        else
-            RGDAL_G_Simplify(object@handle, tolerance)
-   x = newRGDAL2Geometry(x)
+  assertClass(object, "RGDAL2Geometry")
+  h = if ( preserve.topology )
+    RGDAL_G_SimplifyPreserveTopology(object@handle, tolerance)
+  else
+    RGDAL_G_Simplify(object@handle, tolerance)
+   x = newRGDAL2Geometry(h)
    setSRS(x, getSRS(object))
    x
 }
@@ -1218,8 +1213,8 @@ simplify = function(object, tolerance, preserve.topology = TRUE)
 polygonize = function(object)
 {
     assertClass(object, "RGDAL2Geometry")
-    x = RGDAL_G_Polygonize(object@handle)
-    x = newRGDAL2Geometry(x)
+    h = RGDAL_G_Polygonize(object@handle)
+    x = newRGDAL2Geometry(h)
     setSRS(x, getSRS(object))
     x
 }

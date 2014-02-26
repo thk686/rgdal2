@@ -123,15 +123,6 @@ function(object)
 #' @rdname get-set-srs
 #' @export
 setMethod("getSRS",
-signature("RGDAL2LayerGeometry"),
-function(object)
-{
-    getSRS(object@layer)
-})
-
-#' @rdname get-set-srs
-#' @export
-setMethod("getSRS",
 signature("RGDAL2Layer"),
 function(object)
 {
@@ -149,16 +140,6 @@ signature(object = "RGDAL2Geometry", SRS = "RGDAL2SpatialRef"),
 function(object, SRS)
 {
     RGDAL_G_AssignSpatialReference(object@handle, SRS@handle)
-    invisible(object)
-})
-
-#' @rdname get-set-srs
-#' @export
-setMethod("setSRS",
-signature(object = "RGDAL2LayerGeometry", SRS = "RGDAL2SpatialRef"),
-function(object, SRS)
-{
-    warning("Cannot set SRS on geometry owned by layer")
     invisible(object)
 })
 
@@ -205,7 +186,7 @@ function(object, SRS)
 
 #' @note
 #' Calling \code{setSRS} with \code{SRS = NULL} is a no-op that simply
-#' returns the object without effect other than a warning
+#' returns the object without effect
 #' 
 #' @rdname get-set-srs
 #' @export

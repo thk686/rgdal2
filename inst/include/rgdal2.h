@@ -17,7 +17,7 @@ public:
   }
   operator SEXP() const
   {
-    return handle ?  // Return NULL on NULL pointer
+    return handle ?  // Return NULL SEXP on NULL pointer
       R_MakeExternalPtr(handle, R_NilValue, R_NilValue) :
       R_NilValue;
   }

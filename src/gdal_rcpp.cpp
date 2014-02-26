@@ -531,6 +531,7 @@ SpRefSysH RGDAL_L_GetSpatialRef(LayerH h)
 // [[Rcpp::export]]
 void RGDAL_G_DestroyGeometry(GeometryH h)
 {
+  Rcpp::Rcout << "Destroying gemetry at: " << h << std::endl;
   OGR_G_DestroyGeometry(*h);
 }
 
@@ -1148,4 +1149,10 @@ GeometryH RGDAL_G_Polygonize(GeometryH g)
 void RGDAL_F_Destroy(FeatureH h)
 {
   OGR_F_Destroy(*h);
+}
+
+// [[Rcpp::export]]
+GeometryH RGDAL_G_ForceToMultiPolygon(GeometryH h)
+{
+  return OGR_G_ForceToMultiPolygon(OGR_G_Clone(*h));
 }
