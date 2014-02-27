@@ -2,6 +2,9 @@
 # Copyright Timothy H. Keitt
 #
 
+#' @include defs.R
+NULL
+
 newRGDAL2Datasource = function(handle)
 {
     if ( is.null(handle) ) return(NULL)
@@ -23,11 +26,11 @@ newRGDAL2SQLLayer = function(handle, datasource, sql)
     new("RGDAL2SQLLayer", handle = handle, datasource = datasource, sql = sql)
 }
 
-newRGDAL2Feature = function(handle, layer)
+newRGDAL2Feature = function(handle)
 {
   if ( is.null(handle) ) return(NULL)
   reg.finalizer(handle, function(x) RGDAL_F_Destroy(x))
-  new("RGDAL2Feature", handle = handle, layer = layer@handle)
+  new("RGDAL2Feature", handle = handle)
 }
 
 newRGDAL2Geometry = function(handle)
@@ -192,7 +195,7 @@ addPointsFromList = function(x, points)
         zz = as.double(points$z)
         lapply(seq(along = xx), function(i)
         {
-            OGR_G_AddPoint(x@handle, xx[i], yy[i], zz[i])
+            RGDAL_G_AddPoint_3D(x@handle, xx[i], yy[i], zz[i])
         })
         return(invisible(x))
     }
@@ -218,7 +221,7 @@ addRingsFromList = function(x, points)
     else
     {
         if ( is.list(points) )
-            lapply(points, function(pts) addRingFromList(x, pts))
+            lapply(points, function(pts) addRingsFromList(x, pts))
         else
             stop("Invalid points list")
     }

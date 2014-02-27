@@ -2,6 +2,9 @@
 # Copyright Timothy H. Keitt
 #
 
+#' @include defs.R
+NULL
+
 newRGDAL2Dataset = function(handle)
 {
     reg.finalizer(handle, RGDAL_Close, TRUE)
@@ -24,10 +27,9 @@ readDataset = function(x, i, j, k = 1L:nband(x), ii = i, jj = j, drop = TRUE)
     nColsIn = diff(range(j)) + 1L
     nRowsOut = diff(range(ii)) + 1L
     nColsOut = diff(range(jj)) + 1L
-    res = RGDALReadDataset(x@handle, min(j) - 1L, min(i) - 1L,
-                           nColsIn, nRowsIn, nColsOut, nRowsOut, as.integer(k))
+    res = RGDAL_ReadDataset(x@handle, min(j) - 1L, min(i) - 1L,
+                            nColsIn, nRowsIn, nColsOut, nRowsOut, as.integer(k))
     res = res[ii - min(ii) + 1L, jj - min(jj) + 1L,, drop = FALSE]
-    attr(res, "class") = NULL
     if ( drop ) drop(res) else res
 }
 

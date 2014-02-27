@@ -2,6 +2,9 @@
 # Copyright Timothy H. Keitt
 #
 
+#' @include defs.R
+NULL
+
 #
 # Grid stuff
 #
@@ -54,6 +57,7 @@ geometryGrob = function(object, ..., units = "native")
 #' @param region a geometry setting the drawing region
 #' @param overlay if false, clear the graphics device before plotting
 #' @param recording if false, do not record on the graphics stack
+#' @param ... additional arguments passed to \code{\link{grid.draw}}
 #' 
 #' @return the grid graphics object invisibly
 #' 
@@ -71,7 +75,8 @@ function(object, ..., region = extent(object), overlay = FALSE, recording = TRUE
 })
 
 #' @rdname draw
-setMethod("draw", "RGDAL2Geometry",
+setMethod("draw",
+signature("RGDAL2Geometry"),
 function(object, ..., region = extent(object), overlay = FALSE, recording = TRUE)
 {
     if ( ! overlay ) 
@@ -85,7 +90,8 @@ function(object, ..., region = extent(object), overlay = FALSE, recording = TRUE
 })
 
 #' @rdname draw
-setMethod("draw", "RGDAL2Layer",
+setMethod("draw",
+signature("RGDAL2Layer"),
 function(object, ..., region = extent(object), overlay = FALSE, recording = TRUE)
 {
     if ( ! overlay ) 
@@ -101,7 +107,8 @@ function(object, ..., region = extent(object), overlay = FALSE, recording = TRUE
 
 #' @param dpi raster image resolution
 #' @rdname draw
-setMethod("draw", "RGDAL2RasterBand",
+setMethod("draw",
+signature("RGDAL2RasterBand"),
 function(object, ..., dpi = 100, region = extent(object), overlay = FALSE, recording = TRUE)
 {
     if ( ! overlay ) 
@@ -115,7 +122,8 @@ function(object, ..., dpi = 100, region = extent(object), overlay = FALSE, recor
 })
 
 #' @rdname draw
-setMethod("draw", "RGDAL2Dataset",
+setMethod("draw",
+signature("RGDAL2Dataset"),
 function(object, ..., dpi = 100, region = extent(object), overlay = FALSE, recording = TRUE)
 {
     if ( ! overlay ) 
@@ -133,8 +141,9 @@ function(object, ..., dpi = 100, region = extent(object), overlay = FALSE, recor
 #' Uses the \code{\link{extent}} of a spatial object to
 #' set the viewport.
 #' 
-#' @param object
+#' @param object any object for which \code{\link{extent}} is defined
 #' @param recording if true, grid will record a copy of the grob
+#' @param ... additional arguments passed to \code{\link{viewport}}
 #' 
 #' @export
 setViewport = function(object, ..., recording = TRUE)

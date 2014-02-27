@@ -2,6 +2,9 @@
 # Copyright Timothy H. Keitt
 #
 
+#' @include defs.R
+NULL
+
 #' Open an OGR datasource
 #'
 #' Opens the datasource associated with the specified file.
@@ -90,7 +93,8 @@ function(object)
 #' @aliases datasource
 #' @rdname data-source-methods
 #' @export
-setMethod('length', "RGDAL2Datasource",
+setMethod('length',
+signature("RGDAL2Datasource"),
 function(x)
 {
     RGDAL_DS_GetLayerCount(x@handle)
@@ -98,7 +102,9 @@ function(x)
 
 #' @rdname data-source-methods
 #' @export
-setMethod("names", "RGDAL2Datasource", function(x)
+setMethod("names",
+signature("RGDAL2Datasource"),
+function(x)
 {
     res = character(length(x))
     for ( i in 1:length(res) )
@@ -109,7 +115,8 @@ setMethod("names", "RGDAL2Datasource", function(x)
 #' @param i the layer number
 #' @rdname data-source-methods
 #' @export
-setMethod("[","RGDAL2Datasource",
+setMethod("[",
+signature("RGDAL2Datasource"),
 function(x, i)
 {
     res = NULL
@@ -120,7 +127,8 @@ function(x, i)
 
 #' @rdname data-source-methods
 #' @export
-setMethod("[[", "RGDAL2Datasource",
+setMethod("[[",
+signature("RGDAL2Datasource"),
 function(x, i)
 {
     getLayer(x, i)    
@@ -129,7 +137,8 @@ function(x, i)
 #' @param name the name of the layer
 #' @rdname data-source-methods
 #' @export
-setMethod("$", "RGDAL2Datasource",
+setMethod("$",
+signature("RGDAL2Datasource"),
 function(x, name)
 {
     getLayer(x, name)
@@ -148,6 +157,7 @@ function(object)
 #' 
 #' Opens an OGR data source and returns a layer
 #' 
+#' @param fname a file name
 #' @param layer the layer number
 #' @param readonly if true, dissable writes
 #' 
@@ -391,7 +401,7 @@ getFeature = function(x, fid)
 {
     assertClass(x, "RGDAL2Layer")
     feat = RGDAL_GetFeature(x@handle, fid)
-    newRGDAL2Feature(feat, x)
+    newRGDAL2Feature(feat)
 }
 
 #' Fetch the next feature
@@ -417,7 +427,7 @@ getNextFeature = function(x)
 {
     assertClass(x, "RGDAL2Layer")
     feat = RGDAL_L_GetNextFeature(x@handle)
-    newRGDAL2Feature(feat, x)
+    newRGDAL2Feature(feat)
 }
 
 #' Fetch the next geometry
@@ -467,15 +477,16 @@ getNextGeometry = function(x)
 getIDs = function(x)
 {
     assertClass(x, "RGDAL2Layer")
-    unclass(RGDAL_GetFIDs(x@handle))
+    RGDAL_GetFIDs(x@handle)
 }
 
 #' OGR apply-like functions
 #' 
 #' Apply a function to all features  or geometries in a layer
 #' 
-#' @parm x a data layer
-#' @parm applyFun a function or string
+#' @param x a data layer
+#' @param applyFun a function or string
+#' @param ... optional arguments passed to \code{applyFun}
 #' 
 #' @details
 #' The call signature for is \code{function(feature, ...)} or
@@ -516,7 +527,7 @@ lapplyGeometries = function(x, applyFun, ...)
 #' @param x a layer object
 #' 
 #' @details
-#' The layer will be \code{\link{rewound}} and all geometries
+#' The layer will be \code{\link{rewind}} and all geometries
 #' extracted. After this function is called, the internal feature
 #' cursor will be past the end of the feature list. You must call
 #' \code{\link{rewind}} again before fetching features from the
@@ -540,7 +551,7 @@ getGeometries = function(x)
     geomvec = RGDAL_GetGeometries(x@handle)
     res = lapply(1:length(geomvec), function(i)
     {
-        newRGDAL2Geometry(geomvec[[i]], x)
+        newRGDAL2Geometry(geomvec[[i]])
     })
     unlist(res)
 }
@@ -553,7 +564,7 @@ getGeometries = function(x)
 #' @param reset if true, \code{\link{rewind}} the layer
 #' 
 #' @details
-#' Combined with \code{\link{foreach}} and \code{\link{do}} the
+#' Combined with \code{\link{foreach}} and \code{\%do\%} the
 #' returned object can be used to iterate over all features in a
 #' data layer.
 #' 
@@ -579,7 +590,7 @@ featureIter = function(x, reset = TRUE)
 #' @param reset if true, \code{\link{rewind}} the layer
 #' 
 #' @details
-#' Combined with \code{\link{foreach}} and \code{\link{do}} the
+#' Combined with \code{\link{foreach}} and \code{\%do\%} the
 #' returned object can be used to iterate over all geometries in a
 #' data layer.
 #' 
@@ -613,16 +624,15 @@ geometryIter = function(x, reset = TRUE)
 #' f = system.file("example-data/continents", package = "rgdal2")
 #' x = openOGRLayer(f)
 #' y = as(x, 'data.frame')
-#' head(y)
+#' show(y)
 #'
-#' @name as
+#' @name as-data-frame
 #' @aliases as-data-frame
-#' @family layer-io
-#' @export
 setAs('RGDAL2Layer',
 signature('data.frame'),
 function(from)
 {
+    i = 1L # for bug in R CMD check
     res = foreach(i = featureIter(from),
                   .init = data.frame(),
                   .combine = rbind) %do%
@@ -630,8 +640,8 @@ function(from)
         getFields(i)
     }
     res = cbind(getIDs(from), res)
-    fidcolnam = RGDAL_L_GetFIDColumn(from@handle)
-    names(res)[1] = ifelse(nchar(fidcolnam), fidcolname, "FID")
+    fidcolname = RGDAL_L_GetFIDColumn(from@handle)
+    names(res)[1] = ifelse(nchar(fidcolname), fidcolname, "FID")
     geomfname = RGDAL_L_GetGeometryColumn(from@handle)
     if ( nchar(geomfname) == 0 ) geomfname = "GEOM"
     class(res) = c('RGDAL2LayerDF', class(res))
@@ -749,7 +759,11 @@ function(object)
 {
   file = tempfile()
   on.exit(unlink(file))
-  RGDAL_PrintFeature(object@handle, file)
+  if ( RGDAL_PrintFeature(object@handle, file) )
+  {
+    show(object@handle)
+    return(invisible())
+  }
   res = readLines(file)
   catLines(res)
   return(invisible(res))
@@ -786,7 +800,7 @@ getFields = function(x)
 getID = function(x)
 {
     assertClass(x, "RGDAL2Feature")
-    RGDAL_GetFID(x@handle)
+    RGDAL_F_GetFID(x@handle)
 }
 
 #' Fetch a geometry from a feature
@@ -800,7 +814,7 @@ getGeometry = function(x)
 {
     assertClass(x, "RGDAL2Feature")
     geom = RGDAL_F_GetGeometryRef(x@handle)
-    newRGDAL2Geometry(geom, x@layer)
+    newRGDAL2Geometry(geom)
 }
 
 #' Get the spatial reference system from a feature
@@ -855,12 +869,11 @@ function(object)
   return(invisible(res))
 })
 
-#Fixme: this should return count of geometries
-setMethod('length', "RGDAL2Geometry", function(x)
+setMethod('length',
+signature("RGDAL2Geometry"),
+function(x)
 {
-    cdim = RGDAL_G_GetCoordinateDimension(x@handle)
-    if ( cdim == 0 ) return(0L)
-    length(unlist(getPoints(x))) / cdim
+    RGDAL_G_GetGeometryCount(x@handle)
 })
 
 getPoints = function(x, collapse = FALSE)
@@ -893,17 +906,30 @@ addGeometry = function(g1, g2)
 {
     stopifnot(inherits(g1, "RGDAL2Geometry"))
     stopifnot(inherits(g2, "RGDAL2Geometry"))
-    stopifnot(length(g2) != 0)
     if ( RGDAL_G_AddGeometry(g1@handle, g2@handle) )
         stop("Cannot add geometry")
     invisible(g1)
 }
 
-setMethod("[", "RGDAL2Geometry",
+#' Extract subgeometries
+#'
+#' Fetch components of a geometry
+#'
+#' @param x a geometry object
+#' @param i the geometry component index
+#'
+#' @examples
+#' x = newGeometry("MULTIPOINT", list(x = rnorm(3), y = rnorm(3)))
+#' x[[1]]; x[[2]]; x[[3]]
+#'
+#' @aliases [[,geometry
+#' @export
+setMethod("[[",
+signature("RGDAL2Geometry"),
 function(x, i)
 {
-    handle = RGDAL_G_GetGeometryRef(x@handle, i)
-    res = newRGDAL2Geometry(handle) #Who owns handle?
+    handle = RGDAL_G_GetGeometryRef(x@handle, i[1] - 1)
+    res = newRGDAL2Geometry(handle)
     if ( !is.null(res) )
         setSRS(res, getSRS(x))
     res
@@ -911,7 +937,8 @@ function(x, i)
 
 #' @rdname extent
 #' @export
-setMethod("extent", "RGDAL2Geometry",
+setMethod("extent",
+signature("RGDAL2Geometry"),
 function(object)
 {
     res = RGDAL_GetGeomEnv(object@handle)
@@ -921,13 +948,16 @@ function(object)
 
 })
 
-setMethod("properties", "RGDAL2Geometry",
+#' @rdname properties
+#' @export
+setMethod("properties",
+signature("RGDAL2Geometry"),
 function(object)
 {
-    list(is.empty = RGDAL_G_IsEmpty(x@handle) == 1,
-         is.valid = RGDAL_G_IsValid(x@handle) == 1,
-         is.simple = RGDAL_G_IsSimple(x@handle) == 1,
-         is.ring = RGDAL_G_IsRing(x@handle) == 1)
+    list(is.empty = RGDAL_G_IsEmpty(object@handle) == 1,
+         is.valid = RGDAL_G_IsValid(object@handle) == 1,
+         is.simple = RGDAL_G_IsSimple(object@handle) == 1,
+         is.ring = RGDAL_G_IsRing(object@handle) == 1)
 })
 
 #
@@ -964,8 +994,14 @@ function(object)
 #' 
 #' gp1 = gpar(lwd = 6, lty = 2, col = rgb(1, 0, 0, 0.5), fill = NA)
 #' gp2 = gpar(lwd = 6, lty = 2, col = rgb(0, 1, 0, 0.5), fill = NA)
-#' gp3 = gpar(lwd = 6, col = rgb(0, 0, 1, 0.5), fill = NA)
+#' gp3 = gpar(lwd = 6, col = rgb(0, 0, 1, 0.5), fill = rgb(0, 0, 1, 0.25))
 #' roi = extent(x1 %union% x2)
+#' 
+#' x3 = x1 %intersection% x2
+#' draw(x1, region = roi, gp = gp1)
+#' draw(x2, gp = gp2, overlay = TRUE)
+#' draw(x3,  gp = gp3, overlay = TRUE)
+#' grid.text("intersection")
 #' 
 #' x3 = x1 %union% x2
 #' draw(x1, region = roi, gp = gp1)
@@ -1065,7 +1101,7 @@ function(object)
     assertClass(lhs, 'RGDAL2Geometry')
     assertClass(rhs, 'RGDAL2Geometry')
     x = RGDAL_G_Intersection(lhs@handle, rhs@handle)
-    newRGDAL2Geometry(handle = x)
+    newRGDAL2Geometry(x)
 }
 
 #' @rdname geometry-binary
@@ -1120,7 +1156,7 @@ function(object)
 #' @examples
 #' x = newGeometry("MULTIPOINT", list(x = rnorm(100), y = rnorm(100)))
 #' y = convexHull(x)
-#' draw(y); draw(x, overlay = T)
+#' draw(y); draw(x, overlay = TRUE)
 #' centroid(y) 
 #' boundary(y)
 #' unionCascaded(y)
@@ -1193,7 +1229,7 @@ area = function(object)
 }
 
 #' @param tolerance larger values increase simplification
-#' @param perserve.topology if true, attempt to not invalidate the geometry
+#' @param preserve.topology if true, attempt to not invalidate the geometry
 #' @rdname geometry-unary
 #' @export
 simplify = function(object, tolerance, preserve.topology = TRUE)
@@ -1224,7 +1260,7 @@ polygonize = function(object)
 #' Create an extent based on input boundaries
 #' 
 #' @param xmin left side
-#' @param xmas right side
+#' @param xmax right side
 #' @param ymin bottom
 #' @param ymax top
 #' @param SRS a spatial reference system
@@ -1243,6 +1279,7 @@ makeExtent = function(xmin = 0, xmax = 1, ymin = 0, ymax = 1, SRS = NULL)
   res
 }
 
+#' @rdname extent
 #' @export
 setMethod("extent",
 signature("list"),

@@ -16,7 +16,7 @@ setClass('RGDAL2BlockMatrix', slots = c(band = 'RGDAL2RasterBand'))
 setClass('RGDAL2Datasource', slots = c(handle = 'externalptr'))
 setClass('RGDAL2Layer', slots = c(handle = 'externalptr', datasource = 'RGDAL2Datasource'))
 setClass('RGDAL2SQLLayer', contains = 'RGDAL2Layer', slots = c(sql = 'character'))
-setClass('RGDAL2Feature', slots = c(handle = 'externalptr', layer = 'RGDAL2Layer'))
+setClass('RGDAL2Feature', slots = c(handle = 'externalptr'))
 setClass('RGDAL2Geometry', slots = c(handle = 'externalptr'))
 
 #

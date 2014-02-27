@@ -2,6 +2,9 @@
 # Copyright Timothy H. Keitt
 #
 
+#' @include defs.R
+NULL
+
 #' Open a GDAL dataset
 #'
 #' Opens the dataset associated with the specified file
@@ -297,14 +300,6 @@ getDataset = function(x)
 {
     assertClass(x, 'RGDAL2RasterBand')
     x@dataset
-}
-
-# This should be rewritten to output a palette
-getColorTable = function(x)
-{
-  x = checkBand(x)
-  x = RGDALGetRasterColorTable(x@handle)
-  as.matrix(x)
 }
 
 #' Fetch the mask associated with a raster band
@@ -813,6 +808,7 @@ function(object)
 #' @param object the raster object (dataset or band)
 #' @param SRS the new spatial reference system
 #' @param file the output filed (ignored if \code{driver = "MEM"})
+#' @param driver the output driver
 #' @param thresh resampling threshold
 #' 
 #' @details
@@ -1011,7 +1007,7 @@ tileCoordIter = function(b, tile.size = getBlockSize(b))
 
 #' @rdname tile
 #' @export
-tileIter = function(b, block.size = getBlockSize(b), native.indexing = FALSE)
+tileIter = function(b, tile.size = getBlockSize(b), native.indexing = FALSE)
 {
   x = 1L
   y = 1L
@@ -1039,7 +1035,7 @@ tileIter = function(b, block.size = getBlockSize(b), native.indexing = FALSE)
 
 foreach.tile = function(x,
                         out = newGDALDataset(nrow(x), ncol(x)),
-                        block.size = getBlockSize(x),
+                        tile.size = getBlockSize(x),
                         init = getBand(out),
                         combine = function(out, i)
                         {

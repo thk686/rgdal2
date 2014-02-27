@@ -2,6 +2,9 @@
 # Copyright Timothy H. Keitt
 #
 
+#' @include defs.R
+NULL
+
 #
 # Functions for spatial reference systems
 #
@@ -28,7 +31,7 @@ function(object)
 #' Builds a spatial reference system descriptor based on a
 #' provided string.
 #' 
-#' @param def a string defining a spatial reference system
+#' @param defn a string defining a spatial reference system
 #' 
 #' @details
 #' The input definition can be in one of four forms:
@@ -128,7 +131,7 @@ function(object)
 {
     x = RGDAL_L_GetSpatialRef(object@handle)
     if ( is.null(x) ) NULL
-    else newRGDAL2SpatialRef(OSRClone(x))
+    else newRGDAL2SpatialRef(RGDAL_OSRClone(x))
 })
 
 #' @aliases setSRS
@@ -168,7 +171,7 @@ setMethod("setSRS",
 signature(object = "RGDAL2Dataset", SRS = "RGDAL2SpatialRef"),
 function(object, SRS)
 {
-    if ( GDALSetProjection(object@handle, getWKT(SRS)) )
+    if ( RGDAL_SetProjection(object@handle, getWKT(SRS)) )
         warning("Error setting projection")
     invisible(object)
 })
@@ -179,7 +182,7 @@ setMethod("setSRS",
 signature(object = "RGDAL2RasterBand", SRS = "RGDAL2SpatialRef"),
 function(object, SRS)
 {
-    if ( GDALSetProjection(object@dataset@handle, getWKT(SRS)) )
+    if ( RGDAL_SetProjection(object@dataset@handle, getWKT(SRS)) )
         warning("Error setting projection")
     invisible(object)
 })
@@ -271,7 +274,7 @@ function(object, SRS)
 isGeographic = function(x)
 {
     if ( !inherits(x, "RGDAL2SpatialRef") ) x = getSRS(x)
-    OSRIsGeographic(x@handle) == 1
+    RGDAL_IsGeographic(x@handle) == 1
 }
 
 hasSRS = function(x)

@@ -16,3 +16,14 @@ Depends:
     RColorBrewer,
     grid
 LinkingTo: Rcpp
+Collate:
+    'RcppExports.R'
+    'defs.R'
+    'gdal_private.R'
+    'gdal_public.R'
+    'graphics.R'
+    'ogr_private.R'
+    'ogr_public.R'
+    'pkg.R'
+    'srs.R'
+    'utils.R'

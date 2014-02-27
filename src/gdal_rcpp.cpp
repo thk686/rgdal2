@@ -525,13 +525,12 @@ void RGDAL_L_ResetReading(LayerH h)
 // [[Rcpp::export]]
 SpRefSysH RGDAL_L_GetSpatialRef(LayerH h)
 {
-  return OGR_L_GetSpatialRef(h);
+  return OGR_L_GetSpatialRef(*h);
 }
 
 // [[Rcpp::export]]
 void RGDAL_G_DestroyGeometry(GeometryH h)
 {
-  Rcpp::Rcout << "Destroying gemetry at: " << h << std::endl;
   OGR_G_DestroyGeometry(*h);
 }
 
@@ -679,6 +678,7 @@ SEXP RGDAL_GetFIDs(LayerH h)
     {
         OGRFeatureH hF = OGR_L_GetNextFeature(*h);
         res[i] = (double) OGR_F_GetFID(hF);
+        OGR_F_Destroy(hF);
     }
     OGR_L_ResetReading(*h);
     return res;
@@ -687,7 +687,7 @@ SEXP RGDAL_GetFIDs(LayerH h)
 // [[Rcpp::export]]
 FeatureH RGDAL_GetFeature(LayerH h, double index)
 {
-    return OGR_F_Clone(OGR_L_GetFeature(*h, (long) index));
+  return OGR_L_GetFeature(*h, (long) index);
 }
 
 // [[Rcpp::export]]
@@ -728,7 +728,7 @@ static OGRwkbGeometryType typeFromName(std::string name)
 // [[Rcpp::export]]
 FeatureH RGDAL_L_GetNextFeature(LayerH h)
 {
-  return OGR_F_Clone(OGR_L_GetNextFeature(*h));
+  return OGR_L_GetNextFeature(*h);
 }
 
 // [[Rcpp::export]]
@@ -758,6 +758,12 @@ SEXP GetFieldNames(LayerH h)
 const char* RGDAL_L_GetFIDColumn(LayerH h)
 {
   return OGR_L_GetFIDColumn(*h); 
+}
+
+// [[Rcpp::export]]
+double RGDAL_F_GetFID(FeatureH h)
+{
+  return OGR_F_GetFID(*h);
 }
 
 // [[Rcpp::export]]
@@ -796,11 +802,13 @@ SEXP RGDAL_GetFields(FeatureH h)
 }
 
 // [[Rcpp::export]]
-void RGDAL_PrintFeature(FeatureH h, const char* fname)
+int RGDAL_PrintFeature(FeatureH h, const char* fname)
 {
     FILE* f = std::fopen(fname, "w");
+    if ( !f ) return 1;
     OGR_F_DumpReadable(*h, f);
     std::fclose(f);
+    return 0;
 }
 
 // [[Rcpp::export]]
@@ -814,7 +822,8 @@ SEXP RGDAL_GetGeometries(LayerH h)
         OGRFeatureH hF = OGR_L_GetNextFeature(*h);
         OGRGeometryH hG = OGR_G_Clone(OGR_F_GetGeometryRef(hF));
         SEXP geomPtr = PROTECT(R_MakeExternalPtr((void*) hG, R_NilValue, R_NilValue));
-        SET_VECTOR_ELT(res, i, geomPtr);                                
+        SET_VECTOR_ELT(res, i, geomPtr);
+        OGR_F_Destroy(hF);
     }
     OGR_L_ResetReading(*h);
     UNPROTECT(n + 1);
@@ -980,6 +989,12 @@ void RGDAL_G_AddPoint_2D(GeometryH h, double x, double y)
 }
 
 // [[Rcpp::export]]
+void RGDAL_G_AddPoint_3D(GeometryH h, double x, double y, double z)
+{
+  OGR_G_AddPoint(*h, x, y, z);
+}
+
+// [[Rcpp::export]]
 void RGDAL_G_Segmentize(GeometryH h, double l)
 {
   OGR_G_Segmentize(*h, l);
@@ -1065,6 +1080,12 @@ int RGDAL_G_Contains(GeometryH g1, GeometryH g2)
 int RGDAL_G_Overlaps(GeometryH g1, GeometryH g2)
 {
   return OGR_G_Overlaps(*g1, *g2);
+}
+
+// [[Rcpp::export]]
+GeometryH RGDAL_G_Intersection(GeometryH g1, GeometryH g2)
+{
+  return OGR_G_Intersection(*g1, *g2);
 }
 
 // [[Rcpp::export]]
@@ -1156,3 +1177,100 @@ GeometryH RGDAL_G_ForceToMultiPolygon(GeometryH h)
 {
   return OGR_G_ForceToMultiPolygon(OGR_G_Clone(*h));
 }
+
+// [[Rcpp::export]]
+int RGDAL_IsGeographic(SpRefSysH h)
+{
+  return OSRIsGeographic(*h);
+}
+
+// [[Rcpp::export]]
+DatasourceH RGDAL_CreateDataSource(const char* driver, const char* name)
+{
+    OGRSFDriverH hDriver = OGRGetDriverByName(driver);  
+    OGRDataSourceH res = OGR_Dr_CreateDataSource(hDriver, name, NULL);
+    return res;
+}
+
+// [[Rcpp::export]]
+NumericVector RGDAL_ReadDataset(DatasetH h,
+                                int x0, int y0,
+                                int xrin, int yrin,
+                                int xrout, int yrout,
+                                IntegerVector bands)
+{
+    int nband = bands.size();
+    NumericVector res(Dimension(yrout, xrout, nband));
+    _(GDALDatasetRasterIO(*h, GF_Read, x0, y0, xrin, yrin,
+                          &res[0], xrout, yrout, GDT_Float64,
+                          nband, &bands[0], 0, 0, 0));
+    return res;
+}
+
+// [[Rcpp::export]]
+int RGDAL_L_SetAttributeFilter(LayerH h, const char* query)
+{
+    return OGR_L_SetAttributeFilter(*h, query);
+}
+
+// [[Rcpp::export]]
+void RGDAL_L_SetSpatialFilter(LayerH h, GeometryH g)
+{
+    OGR_L_SetSpatialFilter(*h, *g);
+}
+
+// [[Rcpp::export]]
+int RGDAL_G_IsEmpty(GeometryH h)
+{
+    return OGR_G_IsEmpty(*h);
+}
+
+// [[Rcpp::export]]
+int RGDAL_G_IsValid(GeometryH h)
+{
+    return OGR_G_IsValid(*h);
+}
+
+// [[Rcpp::export]]
+int RGDAL_G_IsSimple(GeometryH h)
+{
+    return OGR_G_IsSimple(*h);
+}
+
+// [[Rcpp::export]]
+int RGDAL_G_IsRing(GeometryH h)
+{
+    return OGR_G_IsRing(*h);
+}
+
+// [[Rcpp::export]]
+int RGDAL_G_GetGeometryCount(GeometryH h)
+{
+    return OGR_G_GetGeometryCount(*h);
+}
+
+// [[Rcpp::export]]
+GeometryH RGDAL_G_GetGeometryRef(GeometryH h, int i)
+{
+    return OGR_G_Clone(OGR_G_GetGeometryRef(*h, i));
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
