@@ -2,6 +2,9 @@
 # Copyright Timothy H. Keitt
 #
 
+#' @include pkg.R
+NULL
+
 #
 # GDAL raster classes
 #

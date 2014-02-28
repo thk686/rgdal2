@@ -416,6 +416,7 @@ GeometryH RGDAL_GetRasterExtent(DatasetH h)
       OGR_G_AddPoint_2D(hRing, geox, geoy);
     }
     _(OGR_G_AddGeometry(hGeom, hRing));
+    OGR_G_DestroyGeometry(hRing);
     return hGeom;
 }
 
@@ -440,8 +441,9 @@ static OGRGeometryH extentToGeom(OGREnvelope env)
     OGR_G_AddPoint_2D(ring, env.MaxX, env.MaxY);
     OGR_G_AddPoint_2D(ring, env.MaxX, env.MinY);
     OGR_G_AddPoint_2D(ring, env.MinX, env.MinY);
-    OGR_G_AddGeometry(res, ring); // copy?
-    return res; // leak?
+    _(OGR_G_AddGeometry(res, ring));
+    OGR_G_DestroyGeometry(ring);
+    return res;
 }
 
 // [[Rcpp::export]]
@@ -862,6 +864,7 @@ GeometryH RGDAL_MakeExtent(double xmin, double xmax, double ymin, double ymax)
     OGR_G_AddPoint_2D(hRing, xmax, ymin);
     OGR_G_AddPoint_2D(hRing, xmin, ymin);
     _(OGR_G_AddGeometry(hGeom, hRing));
+    OGR_G_DestroyGeometry(hRing);
     return hGeom;
 }
 
@@ -1187,7 +1190,8 @@ int RGDAL_IsGeographic(SpRefSysH h)
 // [[Rcpp::export]]
 DatasourceH RGDAL_CreateDataSource(const char* driver, const char* name)
 {
-    OGRSFDriverH hDriver = OGRGetDriverByName(driver);  
+    OGRSFDriverH hDriver = OGRGetDriverByName(driver);
+    if ( ! hDriver ) return hDriver;
     OGRDataSourceH res = OGR_Dr_CreateDataSource(hDriver, name, NULL);
     return res;
 }
@@ -1255,7 +1259,16 @@ GeometryH RGDAL_G_GetGeometryRef(GeometryH h, int i)
     return OGR_G_Clone(OGR_G_GetGeometryRef(*h, i));
 }
 
-
+// [[Rcpp::export]]
+GeometryH RGDAL_G_Append(GeometryH g1, GeometryH g2)
+{
+  GeometryH g3 = OGR_G_Clone(*g1);
+  if ( OGR_G_AddGeometry(*g3, *g2) )
+  {
+    stop("Cannot append geometry\n");
+  }
+  return g3;
+}
 
 
 

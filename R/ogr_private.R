@@ -29,15 +29,28 @@ newRGDAL2SQLLayer = function(handle, datasource, sql)
 newRGDAL2Feature = function(handle)
 {
   if ( is.null(handle) ) return(NULL)
-  reg.finalizer(handle, function(x) RGDAL_F_Destroy(x))
+  reg.finalizer(handle, RGDAL_F_Destroy, TRUE)
   new("RGDAL2Feature", handle = handle)
 }
 
+#newRGDAL2Geometry = function(handle)
+#{
+#    if ( is.null(handle) ) return(NULL)
+#    ffun = function(x)
+#    {
+#      cat("Geometry handle tracing: destroying: "); show(x)
+#      RGDAL_G_DestroyGeometry(x)
+#    }
+#    reg.finalizer(handle, ffun, TRUE)
+#    cat("Geometry handle tracing: new geometry at: "); show(handle)
+#    new("RGDAL2Geometry", handle = handle)
+#}
+
 newRGDAL2Geometry = function(handle)
 {
-    if ( is.null(handle) ) return(NULL)
-    reg.finalizer(handle, function(x) RGDAL_G_DestroyGeometry(x))
-    new("RGDAL2Geometry", handle = handle)
+  if ( is.null(handle) ) return(NULL)
+  reg.finalizer(handle, RGDAL_G_DestroyGeometry, TRUE)
+  new("RGDAL2Geometry", handle = handle)
 }
 
 getLayer = function(x, layer = 1L)
@@ -102,49 +115,6 @@ setMethod("testCapability", "RGDAL2Layer",
     RGDAL_L_TestCapability(object@handle, capability) == 1;
 })
 
-drawPolygonGeom = function(x, ...)
-{
-    coords = getPoints(x)
-    if ( is.null(coords$x) )
-        lapply(coords, function(y)
-        {
-            polygon(y, ...)    
-        })
-    else
-        polygon(coords, ...)
-    invisible(coords)
-}
-
-get.plot.fun = function(geom)
-{
-    switch(RGDAL_G_GetGeometryType(geom@handle),
-           POINT = points,
-           MULTIPOINT = points,
-           LINESTRING = lines,
-           MULTILINESTRING = lines,
-           POLYGON = drawPolygonGeom,
-           MULTIPOLYGON = drawPolygonGeom,
-           lines)
-}
-
-plotGeom = function(x, ...)
-{
-    coords = getPoints(x)
-    if ( is.null(coords$x) )
-        lapply(coords, function(y)
-        {
-            plot(y, ...)    
-        })
-    else
-        plot(coords, ...)
-}
-
-initPlot = function(x)
-{
-    plotGeom(x, asp = 1, type = 'n', axes = FALSE,
-             xlab = NA, ylab = NA, xaxs = "i", yaxs = "i")
-}
-
 getProj4FromAlias = function(alias)
 {
     aliases = c("WGS84", "NAD83", "USNatAtl", "NALCC",
@@ -204,8 +174,7 @@ addPointsFromList = function(x, points)
 
 addRingToPolygon = function(x, points)
 {
-    ring = newGeometry('LINEARRING')
-    addPointsFromList(ring, points)
+    ring = newGeometry('LINEARRING', points)
     if ( RGDAL_G_AddGeometry(x@handle, ring@handle) )
         stop("Error adding points")
     RGDAL_G_CloseRings(x@handle)
@@ -246,23 +215,21 @@ accumPointsFromList = function(x, points)
 
 addPointToMultiPoint = function(x, points)
 {
-    pt = newGeometry("POINT")
     if ( is3DPointList(points) )
         for ( i in 1:length(points$x) )
         {
-            addPoints(pt, list(x = points$x[i],
-                               y = points$y[i],
-                               z = points$z[i]))
-            addGeometry(x, pt)
+          pt = newGeometry("POINT", list(x = points$x[i],
+                                         y = points$y[i],
+                                         z = points$z[i]))
+          addGeometry(x, pt)
         }
     else
         for ( i in 1:length(points$x) )
         {
-            addPoints(pt, list(x = points$x[i],
-                               y = points$y[i]))
-            addGeometry(x, pt)
+          pt = newGeometry("POINT", list(x = points$x[i],
+                                         y = points$y[i]))
+          addGeometry(x, pt)
         }
-    RGDAL_G_DestroyGeometry(pt@handle)
     invisible(x)
 }
     

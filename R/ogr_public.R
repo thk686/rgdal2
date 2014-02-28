@@ -54,7 +54,8 @@ newOGRDatasource = function(driver = "MEM", fname = tempfile())
     newRGDAL2Datasource(x)
 }
 
-setMethod('show', 'RGDAL2Datasource',
+setMethod('show',
+signature('RGDAL2Datasource'),
 function(object)
 {
     ogrinfo = Sys.which('ogrinfo')
@@ -144,6 +145,8 @@ function(x, name)
     getLayer(x, name)
 })
 
+#' @rdname properties
+#' @export
 setMethod("properties",
 signature("RGDAL2Datasource"),
 function(object)
@@ -167,7 +170,6 @@ function(object)
 #' show(x)
 #' draw(x, gp = gpar(fill = "lightblue"))
 #' 
-#' @family ogr-io
 #' @export
 openOGRLayer = function(fname, layer = 1L, readonly = TRUE)
 {
@@ -184,7 +186,6 @@ openOGRLayer = function(fname, layer = 1L, readonly = TRUE)
 #' x = openOGRLayer(f)
 #' getLayerName(x)
 #' 
-#' @family layer-io
 #' @export
 getLayerName = function(x)
 {
@@ -227,7 +228,6 @@ function(object)
 #' length(x)
 #' names(x)
 #' 
-#' @family layer-io
 #' @aliases vector-layer
 #' @rdname layer-methods
 #' @export
@@ -268,7 +268,11 @@ function(x)
 #' 
 #' @examples
 #' f = system.file("example-data/continents", package = "rgdal2")
-#' x = openOGRLayer(f)
+#' x = openOGR(f)
+#' properties(x)
+#' x = x[[1]]
+#' properties(x)
+#' x = getNextGeometry(x)
 #' properties(x)
 #' 
 #' @aliases properties
@@ -316,7 +320,6 @@ function(object)
 #' 
 #' execSQL(x, "select * from continent")  #only for side-effect
 #' 
-#' @family ogr-io
 #' @rdname sql-layer
 #' @export
 getSQLLayer = function(x, sql)
@@ -368,7 +371,6 @@ function(object)
 #' no geometries remain. To start with the first geometry, this function must
 #' be called if the cursor is not already at the begining.
 #' 
-#' @family layer-io
 #' @export
 rewind = function(x)
 {
@@ -395,7 +397,6 @@ rewind = function(x)
 #' f = getFeature(x, ids[[1]])
 #' show(f)
 #' 
-#' @family layer-io
 #' @export
 getFeature = function(x, fid)
 {
@@ -421,7 +422,6 @@ getFeature = function(x, fid)
 #' g = getNextGeometry(x)
 #' show(g)
 #' 
-#' @family layer-io
 #' @export
 getNextFeature = function(x)
 {
@@ -447,7 +447,6 @@ getNextFeature = function(x)
 #' g = getNextGeometry(x)
 #' show(g)
 #' 
-#' @family layer-io
 #' @export
 getNextGeometry = function(x)
 {
@@ -482,7 +481,7 @@ getIDs = function(x)
 
 #' OGR apply-like functions
 #' 
-#' Apply a function to all features  or geometries in a layer
+#' Apply a function to all features or geometries in a layer
 #' 
 #' @param x a data layer
 #' @param applyFun a function or string
@@ -568,6 +567,18 @@ getGeometries = function(x)
 #' returned object can be used to iterate over all features in a
 #' data layer.
 #' 
+#' @examples
+#' f = system.file("example-data/continents", package = "rgdal2")
+#' x = openOGRLayer(f)
+#' y = foreach(i = featureIter(x),
+#'             .init = data.frame(),
+#'             .combine = rbind) %do% getFields(i)
+#' class(y)
+#' show(y)
+#' 
+#' foreach(i = geometryIter(x), reset = TRUE) %do% area(i)
+#' 
+#' @rdname layer-iters
 #' @export
 featureIter = function(x, reset = TRUE)
 {
@@ -582,18 +593,7 @@ featureIter = function(x, reset = TRUE)
     structure(list(nextElem = f), class = c('rgdal2featureIter', 'abstractiter', 'iter'))
 }
 
-#' Create geometry iterator
-#' 
-#' Generate a geometry iterator for use with \code{\link{foreach}}.
-#' 
-#' @param x a data layer
-#' @param reset if true, \code{\link{rewind}} the layer
-#' 
-#' @details
-#' Combined with \code{\link{foreach}} and \code{\%do\%} the
-#' returned object can be used to iterate over all geometries in a
-#' data layer.
-#' 
+#' @rdname layer-iters
 #' @export
 geometryIter = function(x, reset = TRUE)
 {
@@ -712,6 +712,20 @@ function(object)
 #' This should in principle cause \code{\link{getGeometries}} to only
 #' return those that overlap the filter geometry. Its not clear to me
 #' that this actually works.
+#' 
+#' @examples
+#' f = system.file("example-data/continents", package = "rgdal2")
+#' x = openOGRLayer(f)
+#' setSelectWhere(x, "\'CONTINENT\' = \"Africa\"")
+#' g = getNextGeometry(x); rewind(x)
+#' as(x, 'data.frame')
+#' setSelectWhere(x, "")
+#' as(x, 'data.frame')
+#' setSpatialFilter(x, g)
+#' as(x, 'data.frame')
+#' draw(getSpatialFilter(x))
+#' setSpatialFilter(x, extent(x))
+#' as(x, 'data.frame')
 #' 
 #' @rdname spatial-filter
 #' @export
@@ -842,18 +856,24 @@ function(object)
 #' @param points an x, y point list
 #' @param SRS a spatial reference system object
 #' 
+#' @seealso \code{\link{POINT}}
+#' 
 #' @examples
-#' newGeometry("POINT", list(x = rnorm(3), y = rnorm(3)))
+#' newGeometry("MULTIPOINT", list(x = rnorm(3), y = rnorm(3)))
 #' 
 #' @export
 newGeometry = function(geomType, points = NULL, SRS = NULL)
 {
-    res = RGDAL_G_CreateGeometry(geomType)
-    res = newRGDAL2Geometry(res)
+    h = RGDAL_G_CreateGeometry(geomType)
+    res = newRGDAL2Geometry(h)
     if ( ! is.null(points) )
-        addPoints(res, points)
+    {
+      addPoints(res, points)
+      if ( geomType %in% c("POLYGON", "LINEARRING") )
+        RGDAL_G_CloseRings(res@handle)
+    }
     if ( ! is.null(SRS) )
-        setSRS(res, SRS)
+      setSRS(res, SRS)
     res
 }
 
@@ -869,6 +889,13 @@ function(object)
   return(invisible(res))
 })
 
+#' @examples
+#' f = system.file("example-data/continents", package = "rgdal2")
+#' x = openOGRLayer(f)
+#' length(getNextGeometry(x))
+#' 
+#' @aliases geometry-length
+#' @rdname geometry-misc-ops
 setMethod('length',
 signature("RGDAL2Geometry"),
 function(x)
@@ -876,6 +903,19 @@ function(x)
     RGDAL_G_GetGeometryCount(x@handle)
 })
 
+#' Get points from geometry
+#' 
+#' Extract a list of x and y coordinates
+#' 
+#' @param x a geometry object
+#' @collapse if true, join point lists from all sub-geometries
+#' 
+#' @examples
+#' getPoints(POLYGON())
+#' getPoints(MULTIPOINT())
+#' getPoints(MULTIPOINT(), collapse = TRUE)
+#' 
+#' @export
 getPoints = function(x, collapse = FALSE)
 {
     assertClass(x, "RGDAL2Geometry")
@@ -904,8 +944,8 @@ addPoints = function(x, points)
 
 addGeometry = function(g1, g2)
 {
-    stopifnot(inherits(g1, "RGDAL2Geometry"))
-    stopifnot(inherits(g2, "RGDAL2Geometry"))
+    assertClass(g1, "RGDAL2Geometry")
+    assertClass(g2, "RGDAL2Geometry")
     if ( RGDAL_G_AddGeometry(g1@handle, g2@handle) )
         stop("Cannot add geometry")
     invisible(g1)
@@ -923,6 +963,7 @@ addGeometry = function(g1, g2)
 #' x[[1]]; x[[2]]; x[[3]]
 #'
 #' @aliases [[,geometry
+#' @rdname geometry-misc-ops
 #' @export
 setMethod("[[",
 signature("RGDAL2Geometry"),
@@ -978,8 +1019,8 @@ function(object)
 #' @examples
 #' x = c(0, 0, 1, 1)
 #' y = c(0, 1, 1, 0)
-#' x1 = newGeometry("POLYGON", list(x = x, y = y))
-#' x2 = newGeometry("POLYGON", list(x = x + 0.5, y = y + 0.5))
+#' x1 = POLYGON(x = x, y = y)
+#' x2 = POLYGON(x = x + 0.5, y = y + 0.5)
 #' 
 #' x1 %intersects% x2
 #' x1 %equals% x2
@@ -1020,6 +1061,8 @@ function(object)
 #' draw(x2, gp = gp2, overlay = TRUE)
 #' draw(x3,  gp = gp3, overlay = TRUE)
 #' grid.text("symmetric difference")
+#' 
+#' MULTIPOLYGON() %append% x1 %append% x2
 #' 
 #' @aliases geometry-binary-ops
 #' @rdname geometry-binary
@@ -1143,6 +1186,16 @@ function(object)
     RGDAL_G_Distance(lhs@handle, rhs@handle)
 }
 
+#' @rdname geometry-binary
+#' @export
+'%append%' = function(lhs, rhs)
+{
+  assertClass(lhs, 'RGDAL2Geometry')
+  assertClass(rhs, 'RGDAL2Geometry')
+  h = RGDAL_G_Append(lhs@handle, rhs@handle)
+  newRGDAL2Geometry(h)
+}
+
 #' Unary geometry functions
 #' 
 #' These function operate on geometries.
@@ -1154,15 +1207,15 @@ function(object)
 #' \url{http://www.gdal.org/} for more information.
 #' 
 #' @examples
-#' x = newGeometry("MULTIPOINT", list(x = rnorm(100), y = rnorm(100)))
+#' x = MULTIPOINT(x = rnorm(100), y = rnorm(100))
 #' y = convexHull(x)
 #' draw(y); draw(x, overlay = TRUE)
 #' centroid(y) 
 #' boundary(y)
 #' unionCascaded(y)
-#' lineLength(newGeometry("LINESTRING", list(x = c(0, 1), y = c(0, 1))))
+#' lineLength(LINESTRING(x = c(0, 1), y = c(0, 1)))
 #' area(y)
-#' simplify(y, 0.25)
+#' draw(simplify(y, 2), overlay = T, gp = gpar(fill = NA))
 #' polygonize(x)
 #' 
 #' @aliases geometry-unary-ops
@@ -1308,10 +1361,83 @@ hexGrid = function(object)
     pts = getPoints(e)    
 }
 
+#' Create a POINT object
+#' 
+#' @param x x-values
+#' @param y y-values
+#' 
+#' @examples
+#' POINT(1, 1)
+#' LINESTRING(c(0, 1), c(1, 0))
+#' POLYGON(c(0, 0, 1, 1, 0), c(0, 1, 1, 0, 0))
+#' MULTIPOINT(c(0, 1), c(0, 1))
+#' mls = MULTILINESTRING()
+#' ls1 = LINESTRING(c(0, 1), c(0, 1))
+#' ls2 = LINESTRING(c(1, 1), c(0, 0))
+#' mls = mls %append% ls1
+#' mls %append% ls2
+#' mply = MULTIPOLYGON()
+#' mply = mply %append% POLYGON()
+#' mply %append% POLYGON()
+#' gc = GEOMETRYCOLLECTION()
+#' gc %append% mls %append% ls1 %append% mply
+#' LINEARRING()
+#' POLYGON() %append% LINEARRING()
+#' 
+#' @rdname geometry-constructors
+#' @export
+POINT = function(x = 0, y = 0)
+{
+  newGeometry("POINT", list(x = x, y = y))
+}
 
+#' @rdname geometry-constructors
+#' @export
+LINESTRING = function(x = c(0, 1), y = c(0, 1))
+{
+  newGeometry("LINESTRING", list(x = x, y = y))
+}
 
+#' @rdname geometry-constructors
+#' @export
+POLYGON = function(x = c(0, 0, 1, 1), y = c(0, 1, 1, 0))
+{
+  newGeometry("POLYGON", list(x = x, y = y))
+}
 
+#' @rdname geometry-constructors
+#' @export
+MULTIPOINT = function(x = rnorm(2), y = rnorm(2))
+{
+  newGeometry("MULTIPOINT", list(x = x, y = y))
+}
 
+#' @rdname geometry-constructors
+#' @export
+MULTILINESTRING = function()
+{
+  newGeometry("MULTILINESTRING")
+}
 
+#' @rdname geometry-constructors
+#' @export
+MULTIPOLYGON = function()
+{
+  newGeometry("MULTIPOLYGON")
+}
+
+#' @rdname geometry-constructors
+#' @export
+GEOMETRYCOLLECTION = function()
+{
+  newGeometry("GEOMETRYCOLLECTION")
+}
+
+#' @rdname geometry-constructors
+#' @export
+LINEARRING = function(x = c(0, 0.5, 1), y = c(0, 0.87, 0))
+{
+  newGeometry("LINEARRING", list(x = x, y = y))
+}
 
 

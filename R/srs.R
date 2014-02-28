@@ -218,6 +218,18 @@ function(object, SRS)
 #' show(g1)
 #' g2 = reproject(g1, newSRS("Moll"))
 #' show(g2)
+#' \dontrun{
+#' f = system.file("example-data/continents", package = "rgdal2")
+#' x = openOGRLayer(f)
+#' 
+#' g = getGeometries(x)
+#' draw(reproject(graticule(), getSRS(x)))
+#' invisible(lapply(g, draw, overlay = TRUE, gp = gpar(fill = "lightblue")))
+#'    
+#' g = lapply(g, reproject, "Robinson")
+#' draw(reproject(graticule(), "Robinson"))
+#' invisible(lapply(g, draw, overlay = TRUE, gp = gpar(fill = "lightblue")))
+#' }
 #' 
 #' @aliases reproject-geometry
 #' @rdname reproject-vector

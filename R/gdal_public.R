@@ -498,8 +498,7 @@ nband = function(x)
 getBlockSize = function(x)
 {
     x = checkBand(x)
-    res = RGDAL_GetBlockSize(x@handle)
-    res
+    RGDAL_GetBlockSize(x@handle)
 }
 
 #' Extract data from a raster band
@@ -840,7 +839,8 @@ function(object, SRS, file = tempfile(), driver = "MEM", thresh = 0.125)
 #' @aliases reproject-band
 #' @rdname reproject-raster
 #' @export
-setMethod("reproject", "RGDAL2RasterBand",
+setMethod("reproject",
+signature("RGDAL2RasterBand"),
 function(object, SRS, file = tempfile(), driver = "MEM", thresh = 0.125)
 {
     srs.out = getWKT(SRS)
@@ -978,6 +978,8 @@ function(x)
 #' show(a)
 #' show(b)
 #' 
+#' @seealso \code{\link{foreach.tile}}
+#' 
 #' @rdname tile
 #' @export
 tileCoordIter = function(b, tile.size = getBlockSize(b))
@@ -1033,6 +1035,7 @@ tileIter = function(b, tile.size = getBlockSize(b), native.indexing = FALSE)
   structure(list(nextElem = f), class = c('rgdal2BlockIter', 'abstractiter', 'iter'))
 }
 
+#' @export
 foreach.tile = function(x,
                         out = newGDALDataset(nrow(x), ncol(x)),
                         tile.size = getBlockSize(x),
@@ -1049,13 +1052,13 @@ foreach.tile = function(x,
   args = list()
   if ( inherits(x, 'RGDAL2RasterBand') )
   {
-    args[['i']] = tileIter(x, block.size, native.indexing) 
+    args[['i']] = tileIter(x, tile.size, native.indexing) 
   }
   else
   {
     for ( i in 1:nband(x) )
     {
-      args[[paste0('i', i)]] = tileIter(getBand(x, i), block.size, native.indexing)
+      args[[paste0('i', i)]] = tileIter(getBand(x, i), tile.size, native.indexing)
     }
   }
   args[['.init']] = init
