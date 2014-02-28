@@ -3,6 +3,7 @@
 #
 
 #' @include defs.R
+#' @include srs.R
 NULL
 
 #' Open an OGR datasource
@@ -710,7 +711,7 @@ function(object)
 #' 
 #' @details
 #' This should in principle cause \code{\link{getGeometries}} to only
-#' return those that overlap the filter geometry. Its not clear to me
+#' return those that intersect the filter geometry. Its not clear to me
 #' that this actually works.
 #' 
 #' @examples
@@ -908,7 +909,7 @@ function(x)
 #' Extract a list of x and y coordinates
 #' 
 #' @param x a geometry object
-#' @collapse if true, join point lists from all sub-geometries
+#' @param collapse if true, join point lists from all sub-geometries
 #' 
 #' @examples
 #' getPoints(POLYGON())
@@ -1215,7 +1216,7 @@ function(object)
 #' unionCascaded(y)
 #' lineLength(LINESTRING(x = c(0, 1), y = c(0, 1)))
 #' area(y)
-#' draw(simplify(y, 2), overlay = T, gp = gpar(fill = NA))
+#' draw(simplify(y, 2), overlay = TRUE, gp = gpar(fill = NA))
 #' polygonize(x)
 #' 
 #' @aliases geometry-unary-ops
@@ -1361,7 +1362,9 @@ hexGrid = function(object)
     pts = getPoints(e)    
 }
 
-#' Create a POINT object
+#' Geometry constructors
+#' 
+#' These are shortcuts for creating geometries
 #' 
 #' @param x x-values
 #' @param y y-values

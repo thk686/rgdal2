@@ -3,6 +3,7 @@
 #
 
 #' @include defs.R
+#' @include srs.R
 NULL
 
 #
@@ -100,8 +101,7 @@ function(object, ..., region = extent(object), overlay = FALSE, recording = TRUE
         pushViewport(viewport(width = 0.8, height = 0.8))
         setViewport(region)
     }
-    draw.fun = function(x) draw(x, ..., overlay = TRUE, recording = recording)
-    lapplyGeometries(object, draw.fun)
+    lapplyGeometries(object, draw, overlay = TRUE, recording = recording, ...)
     invisible(object)
 })
 
@@ -258,7 +258,7 @@ pickExtent = function(object = NULL, plot.it = TRUE)
     res = makeExtent(min(p1[1], p2[1]), max(p1[1], p2[1]),
                      min(p1[2], p2[2]), max(p1[2], p2[2]))
     if ( !is.null(object) ) setSRS(res, getSRS(object))
-    if ( plot.it ) draw(res, overlay = T, gp = gpar(lty = 2, lwd = 2))
+    if ( plot.it ) draw(res, overlay = T, gp = gpar(lty = 2, lwd = 2, fill = NA))
     res
 }
 

@@ -3,6 +3,7 @@
 #
 
 #' @include defs.R
+#' @include srs.R
 NULL
 
 #' Open a GDAL dataset
@@ -61,6 +62,7 @@ openGDALBand = function(fname, band = 1L, readonly = TRUE)
 #' @param dataType the storage data type (see details)
 #' @param driver the name of the dataset driver
 #' @param file the name of the file to create
+#' @param opts dataset creation options (see \url{http://www.gdal.org/formats_list.html})
 #' @param nosave unlink the file after creation
 #' 
 #' @details
@@ -85,6 +87,9 @@ openGDALBand = function(fname, band = 1L, readonly = TRUE)
 #' @seealso \code{\link{copyDataset}}
 #' 
 #' @examples
+#' createOpts = c("COMPRESS=LZW", "TILED=YES", "BLOCKXSIZE=16", "BLOCKYSIZE=16")
+#' x = newGDALDataset(64, 64, 8, driver = "GTiff", opts = createOpts)
+#' show(x)
 #' x = newGDALDataset(100, 100, 3, driver = "GTiff", nosave = TRUE)
 #' show(x); dim(x)
 #'
@@ -93,10 +98,11 @@ openGDALBand = function(fname, band = 1L, readonly = TRUE)
 #' @export
 newGDALDataset = function(nrow, ncol, nbands = 1L,
                           dataType = 'Int32', driver = 'MEM',
-                          file = tempfile(), nosave = FALSE)
+                          file = tempfile(), opts = character(),
+                          nosave = FALSE)
 {
-  x = RGDAL_CreateDataset(driver, file, nrow, ncol, nbands, dataType)
-  if ( driver == 'MEM' || nosave ) unlink(file)
+  x = RGDAL_CreateDataset(driver, file, nrow, ncol, nbands, dataType, opts)
+  if ( nosave ) unlink(file)
   newRGDAL2Dataset(x)
 }
 
@@ -978,7 +984,14 @@ function(x)
 #' show(a)
 #' show(b)
 #' 
-#' @seealso \code{\link{foreach.tile}}
+#' x = newGDALBand(9, 9)
+#' x[] = 1:81; x[]
+#' y = foreach.tile(x, tile.size = c(3, 3)) %do%
+#' {
+#'  i$z = t(i$z)
+#'  i # default combine requires we return an iterator
+#' }
+#' y[]
 #' 
 #' @rdname tile
 #' @export
@@ -1015,9 +1028,9 @@ tileIter = function(b, tile.size = getBlockSize(b), native.indexing = FALSE)
   y = 1L
   xx = ncol(b)
   yy = nrow(b)
-  block.size = rep(block.size, length = 2)
-  xby = block.size[2L]
-  yby = block.size[1L]
+  tile.size = rep(tile.size, length = 2)
+  xby = tile.size[2L]
+  yby = tile.size[1L]
   f = function()
   {
     if ( y > yy ) stop('StopIteration')
@@ -1035,30 +1048,47 @@ tileIter = function(b, tile.size = getBlockSize(b), native.indexing = FALSE)
   structure(list(nextElem = f), class = c('rgdal2BlockIter', 'abstractiter', 'iter'))
 }
 
+#' @details
+#' \code{foreach.tile} creates a \code{\link{foreach}} object that can be used
+#' to apply an expression of tiles of data. It uses \code{tileIter} internally.
+#' The default \code{combine} function writes the output into the band returned
+#' by the \code{init} function. Note that the block iterator (\code{i}) has both the raster
+#' values and their x and y coordinates. You can therefore change where the block
+#' of data is written to the output band by manipulating \code{i$x} and \code{i$y}.
+#' 
+#' @param out write output to this dataset
+#' @param init initial input to combine
+#' @param combine a function to combine result of expression with \code{init}
+#' @param final a function that returns the final result
+#' @param inorder process tiles in order?
+#' 
+#' @rdname tile
 #' @export
-foreach.tile = function(x,
-                        out = newGDALDataset(nrow(x), ncol(x)),
-                        tile.size = getBlockSize(x),
+foreach.tile = function(b,
+                        out = newGDALDataset(nrow(b), ncol(b)),
+                        tile.size = getBlockSize(b),
                         init = getBand(out),
-                        combine = function(out, i)
-                        {
-                          out[i$y, i$x, native.indexing = i$native.indexing] = i$z
-                          return(out)
-                        },
-                        final = function(x) out,
+                        combine = NULL,
+                        final = function(x) x,
                         inorder = FALSE,
                         native.indexing = FALSE)
 {
+  if ( is.null(combine) )
+    combine = function(out, i)
+    {
+      out[i$y, i$x, native.indexing = i$native.indexing] = i$z
+      return(out)
+    }
   args = list()
-  if ( inherits(x, 'RGDAL2RasterBand') )
+  if ( inherits(b, 'RGDAL2RasterBand') )
   {
-    args[['i']] = tileIter(x, tile.size, native.indexing) 
+    args[['i']] = tileIter(b, tile.size, native.indexing) 
   }
   else
   {
-    for ( i in 1:nband(x) )
+    for ( i in 1:nband(b) )
     {
-      args[[paste0('i', i)]] = tileIter(getBand(x, i), tile.size, native.indexing)
+      args[[paste0('i', i)]] = tileIter(getBand(b, i), tile.size, native.indexing)
     }
   }
   args[['.init']] = init

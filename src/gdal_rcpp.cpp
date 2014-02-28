@@ -144,13 +144,16 @@ void RGDAL_CleanupAll()
 
 // [[Rcpp::export]]
 DatasetH RGDAL_CreateDataset(const char* driver, const char* fname,
-                             int nrow, int ncol, int nbands, const char* type)
+                             int nrow, int ncol, int nbands, const char* type,
+                             std::vector<std::string> opts)
 {
   GDALDataType dtype = GDALGetDataTypeByName(type);
   if ( !dtype ) stop("Unknown data type specified");
   GDALDriverH hDR = GDALGetDriverByName(driver);
   if ( !hDR ) stop("Invalid GDAL driver\n");
-  GDALDatasetH ds = GDALCreate(hDR, fname, ncol, nrow, nbands, dtype, NULL);
+  std::vector<const char*> sopts(opts.size() + 1, 0);
+  for ( int i = 0; i != opts.size(); ++i ) sopts[i] = opts[i].c_str();
+  GDALDatasetH ds = GDALCreate(hDR, fname, ncol, nrow, nbands, dtype, const_cast<char**>(&sopts[0]));
   if ( ds ) GDALFlushCache(ds);
   return DatasetH(ds);
 }
@@ -260,7 +263,7 @@ SEXP RGDAL_ReadBlock(BandH h, int i, int j)
         case GDT_Int32:
           {
             IntegerVector buf(xsz * ysz, NA_INTEGER);
-            GDALReadBlock(*h, j - 1, i - 1, &buf[0]);
+            _(GDALReadBlock(*h, j - 1, i - 1, &buf[0]));
             IntegerMatrix res(ysz, xsz);
             for ( int x = 0; x != xsz; ++x )
               for ( int y = 0; y != ysz; ++y )
@@ -274,7 +277,7 @@ SEXP RGDAL_ReadBlock(BandH h, int i, int j)
         case GDT_Float64:
           {
             NumericVector buf(xsz * ysz, NA_REAL);
-            GDALReadBlock(*h, j - 1, i - 1, &buf[0]);
+            _(GDALReadBlock(*h, j - 1, i - 1, &buf[0]));
             NumericMatrix res(ysz, xsz);
             for ( int x = 0; x != xsz; ++x )
               for ( int y = 0; y != ysz; ++y )
@@ -288,7 +291,7 @@ SEXP RGDAL_ReadBlock(BandH h, int i, int j)
         case GDT_Byte:
           {
             RawVector buf(xsz * ysz);
-            GDALReadBlock(*h, j - 1, i - 1, &buf[0]);
+            _(GDALReadBlock(*h, j - 1, i - 1, &buf[0]));
             RawMatrix res(ysz, xsz);
             for ( int x = 0; x != xsz; ++x )
               for ( int y = 0; y != ysz; ++y )
@@ -301,7 +304,7 @@ SEXP RGDAL_ReadBlock(BandH h, int i, int j)
         case GDT_Int16:
           {
             std::vector<int16_t> buf(xsz * ysz);
-            GDALReadBlock(*h, j - 1, i - 1, &buf[0]);
+            _(GDALReadBlock(*h, j - 1, i - 1, &buf[0]));
             IntegerMatrix res(ysz, xsz);
             for ( int x = 0; x != xsz; ++x )
               for ( int y = 0; y != ysz; ++y )
@@ -515,7 +518,8 @@ int RGDAL_L_GetFeatureCount(LayerH h)
 // [[Rcpp::export]]
 GeometryH RGDAL_L_GetSpatialFilter(LayerH h)
 {
-  return OGR_L_GetSpatialFilter(*h);
+  OGRGeometryH g = OGR_L_GetSpatialFilter(*h);
+  return g ? OGR_G_Clone(g) : g;
 }
 
 // [[Rcpp::export]]
@@ -1220,7 +1224,7 @@ int RGDAL_L_SetAttributeFilter(LayerH h, const char* query)
 // [[Rcpp::export]]
 void RGDAL_L_SetSpatialFilter(LayerH h, GeometryH g)
 {
-    OGR_L_SetSpatialFilter(*h, *g);
+    OGR_L_SetSpatialFilter(*h, *g); // clones internally
 }
 
 // [[Rcpp::export]]
@@ -1270,7 +1274,53 @@ GeometryH RGDAL_G_Append(GeometryH g1, GeometryH g2)
   return g3;
 }
 
-
+static void RGDAL_AddBands(BandH h1, BandH h2, BandH h3)
+{
+    int xsz1, ysz1, xsz2, ysz2, xsz3, ysz3;
+    GDALGetBlockSize(*h1, &xsz1, &ysz1);
+    GDALGetBlockSize(*h2, &xsz2, &ysz2);
+    GDALGetBlockSize(*h3, &xsz3, &ysz3);
+    if ( xsz1 != xsz2 || xsz2 != xsz3 ||
+         ysz1 != ysz2 || ysz2 != ysz3 )
+      stop("All bands must have the same block size\n");
+    GDALDataType dt1 = GDALGetRasterDataType(*h1),
+                 dt2 = GDALGetRasterDataType(*h2),
+                 dt3 = GDALGetRasterDataType(*h3);
+    if ( dt1 != dt2 || dt2 != dt3 )
+      stop("All bands must be of the same data type\n");
+    switch ( dt1 )
+    {
+        case GDT_Int32:
+          {
+            IntegerVector buf1(xsz1 * ysz1, NA_INTEGER);
+            IntegerVector buf2(xsz1 * ysz1, NA_INTEGER);
+            for ( int i = 0; i != xsz1; ++i )
+              for ( int j = 0; j != ysz1; ++j )
+              {
+                _(GDALReadBlock(*h1, j, i, &buf1[0]));
+                _(GDALReadBlock(*h2, j, i, &buf2[0]));
+                for ( int k = 0; k != buf1.size(); ++k )
+                {
+/*                  if ( buf1[k] == NA_INTEGER ) break;
+                  if ( buf2[k] == NA_INTEGER )
+                  {
+                    buf1[k] = NA_INTEGER;
+                    break;
+                  } */
+                  Rcout << i << " " << j << " " << k << "  " << buf1[k] << " " << buf2[k] << std::endl;
+                  buf1[k] += buf2[k];
+                }
+                _(GDALWriteBlock(*h3, j, i, &buf1[0]));
+              }
+          }
+          break;
+        case GDT_Float64:
+        case GDT_Byte:
+        case GDT_Int16:
+        default:
+            stop("Unsupported data type in block read\n");
+    }
+}
 
 
 
