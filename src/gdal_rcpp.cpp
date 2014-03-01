@@ -1274,6 +1274,12 @@ GeometryH RGDAL_G_Append(GeometryH g1, GeometryH g2)
   return g3;
 }
 
+// [[Rcpp::export]]
+GeometryH RGDAL_G_Buffer(GeometryH g, double dist, int n = 30)
+{
+  return OGR_G_Buffer(*g, dist, n);
+}
+
 static void RGDAL_AddBands(BandH h1, BandH h2, BandH h3)
 {
     int xsz1, ysz1, xsz2, ysz2, xsz3, ysz3;
@@ -1321,8 +1327,6 @@ static void RGDAL_AddBands(BandH h1, BandH h2, BandH h3)
             stop("Unsupported data type in block read\n");
     }
 }
-
-
 
 
 

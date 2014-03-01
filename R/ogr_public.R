@@ -1218,6 +1218,8 @@ function(object)
 #' area(y)
 #' draw(simplify(y, 2), overlay = TRUE, gp = gpar(fill = NA))
 #' polygonize(x)
+#' draw(buffer(y, 1))
+#' draw(y, overlay = TRUE)
 #' 
 #' @aliases geometry-unary-ops
 #' @rdname geometry-unary
@@ -1251,6 +1253,19 @@ convexHull = function(object)
     res = newRGDAL2Geometry(h)
     setSRS(res, getSRS(object))
     res
+}
+
+#' @param dist buffer distance
+#' @param nseg number of segements in curve
+#' @rdname geometry-unary
+#' @export
+buffer = function(object, dist, nseg = 30)
+{
+  assertClass(object, "RGDAL2Geometry")
+  h = RGDAL_G_Buffer(object@handle, dist, nseg)
+  res = newRGDAL2Geometry(h)
+  setSRS(res, getSRS(object))
+  res
 }
 
 #' @rdname geometry-unary
