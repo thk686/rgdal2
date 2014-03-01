@@ -722,11 +722,11 @@ function(object)
 #' as(x, 'data.frame')
 #' setSelectWhere(x, "")
 #' as(x, 'data.frame')
+#' \dontrun{
 #' setSpatialFilter(x, g)
 #' as(x, 'data.frame')
 #' draw(getSpatialFilter(x))
-#' setSpatialFilter(x, extent(x))
-#' as(x, 'data.frame')
+#' }
 #' 
 #' @rdname spatial-filter
 #' @export

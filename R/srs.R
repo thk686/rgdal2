@@ -189,7 +189,7 @@ function(object, SRS)
 
 #' @note
 #' Calling \code{setSRS} with \code{SRS = NULL} is a no-op that simply
-#' returns the object without effect
+#' returns the object without effect.
 #' 
 #' @rdname get-set-srs
 #' @export
@@ -232,7 +232,6 @@ function(object, SRS)
 #' invisible(lapply(g, draw, overlay = TRUE, gp = gpar(fill = "lightblue")))
 #' grid.text("Robinson projection", y = 1.1)
 #' 
-#' @docType methods
 #' @aliases reproject-geometry
 #' @rdname reproject-vector
 #' @export
