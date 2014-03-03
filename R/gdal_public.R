@@ -113,6 +113,7 @@ newGDALDataset = function(nrow, ncol, nbands = 1L,
 #' @param x the source dataset
 #' @param file the file for the new dataset
 #' @param driver the driver for the new dataset
+#' @param opts create options; vector of key=value pairs
 #' 
 #' @details
 #' This function may be convenient for working with a dataset in memory. Note that

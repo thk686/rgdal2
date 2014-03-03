@@ -40,7 +40,7 @@ openOGR = function(fname, readonly = TRUE)
 #' @param opts vector of key=value pairs
 #' 
 #' @details
-#' The \code{MEM} driver creates the datasource in memeory, in which case
+#' The \code{Memory} driver creates the datasource in memeory, in which case
 #' the \code{fname} parameter is ignored.
 #' 
 #' The \code{rgdal2} package does not yet have much support for creating
