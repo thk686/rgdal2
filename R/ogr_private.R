@@ -33,19 +33,6 @@ newRGDAL2Feature = function(handle)
   new("RGDAL2Feature", handle = handle)
 }
 
-#newRGDAL2Geometry = function(handle)
-#{
-#    if ( is.null(handle) ) return(NULL)
-#    ffun = function(x)
-#    {
-#      cat("Geometry handle tracing: destroying: "); show(x)
-#      RGDAL_G_DestroyGeometry(x)
-#    }
-#    reg.finalizer(handle, ffun, TRUE)
-#    cat("Geometry handle tracing: new geometry at: "); show(handle)
-#    new("RGDAL2Geometry", handle = handle)
-#}
-
 newRGDAL2Geometry = function(handle)
 {
   if ( is.null(handle) ) return(NULL)
@@ -56,6 +43,7 @@ newRGDAL2Geometry = function(handle)
 getLayer = function(x, layer = 1L)
 {
     assertClass(x, "RGDAL2Datasource")
+    if ( length(x) == 0 ) return(NULL)
     lyr = if ( is.character(layer) )
             RGDAL_DS_GetLayerByName(x@handle, layer)
           else

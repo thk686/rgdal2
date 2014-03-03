@@ -3,7 +3,6 @@
 #
 
 #' @include defs.R
-#' @include srs.R
 NULL
 
 #

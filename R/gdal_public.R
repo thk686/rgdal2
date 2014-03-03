@@ -3,7 +3,7 @@
 #
 
 #' @include defs.R
-#' @include srs.R
+#' @include gdal_private.R
 NULL
 
 #' Open a GDAL dataset
@@ -131,10 +131,10 @@ newGDALDataset = function(nrow, ncol, nbands = 1L,
 #' @seealso \code{\link{openGDALBand}}, \code{\link{openOGR}} 
 #' 
 #' @export
-copyDataset = function(x, file = tempfile(), driver = "MEM")
+copyDataset = function(x, file = tempfile(), driver = "MEM", opts = character())
 {
     x = checkDataset(x)
-    handle = RGDAL_CreateCopy(x@handle, file, driver)
+    handle = RGDAL_CreateCopy(x@handle, file, driver, opts)
     newRGDAL2Dataset(handle)
 }
 
@@ -806,54 +806,6 @@ function(object)
     extent(object@dataset)
 })
 
-#' Simple raster warping
-#' 
-#' Reproject a raster object
-#' 
-#' @param object the raster object (dataset or band)
-#' @param SRS the new spatial reference system
-#' @param file the output filed (ignored if \code{driver = "MEM"})
-#' @param driver the output driver
-#' @param thresh resampling threshold
-#' 
-#' @details
-#' This function calls a modified version of the GDAL warpsimple utility.
-#' 
-#' If \code{object} is a raster band, the entire dataset will be warped
-#' and the first band of the dataset returned. See \code{\link{getDataset}}.
-#' 
-#' @examples
-#' f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
-#' x = openGDAL(f)
-#' show(grid.layout(1, 2))
-#' draw(x)
-#' y = reproject(x, newSRS("WGS84"))
-#' draw(y)
-#' 
-#' @aliases reproject-dataset
-#' @rdname reproject-raster
-#' @export
-setMethod("reproject",
-signature("RGDAL2Dataset"),
-function(object, SRS, file = tempfile(), driver = "MEM", thresh = 0.125)
-{
-    srs.out = getWKT(SRS)
-    res = RGDAL_RasterWarp(object@handle, file, srs.out, driver, thresh)
-    newRGDAL2Dataset(res)
-})
-
-#' @aliases reproject-band
-#' @rdname reproject-raster
-#' @export
-setMethod("reproject",
-signature("RGDAL2RasterBand"),
-function(object, SRS, file = tempfile(), driver = "MEM", thresh = 0.125)
-{
-    srs.out = getWKT(SRS)
-    res = RGDAL_RasterWarp(object@dataset@handle, file, srs.out, driver, thresh)
-    getBand(newRGDAL2Dataset(res))
-})
-
 #' Get a block-matrix object
 #' 
 #' Construct an object that acts as a matrix of raster blocks
@@ -1098,3 +1050,41 @@ foreach.tile = function(b,
   do.call('foreach', args)
 }
 
+#' Get or set no data value
+#' 
+#' @param object a raster band
+#' @param no.data.value the no data value
+#' 
+#' @details
+#' If you pass a dataset object, the first band will be used.
+#' \code{setNoDataValue} will return a non-zero value on error.
+#' \code{getNoDataValue} will return NULL if the no data value is
+#' not set.
+#' 
+#' @examples
+#' f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
+#' x = openGDALBand(f)
+#' getNoDataValue(x)
+#' y = copyDataset(x)
+#' getNoDataValue(y)
+#' setNoDataValue(y, -1)
+#' getNoDataValue(y)
+#' f = system.file("example-data/bee.jpg", package = "rgdal2")
+#' x = openGDAL(f)
+#' getNoDataValue(x)
+#' 
+#' @rdname get-set-nodatavalue
+#' @export
+getNoDataValue = function(object)
+{
+  object = checkBand(object)
+  RGDAL_GetRasterNoDataValue(object@handle)
+}
+
+#' @rdname get-set-nodatavalue
+#' @export
+setNoDataValue = function(object, no.data.value)
+{
+  object = checkBand(object)
+  RGDAL_SetRasterNoDataValue(object@handle, no.data.value)
+}

@@ -16,7 +16,7 @@
 #' \tabular{ll}{
 #' Package: \tab rgdal2\cr
 #' Type: \tab Package\cr
-#' Version: \tab 0.0\cr
+#' Version: \tab 0.1\cr
 #' Date: \tab 2013-11-14\cr
 #' License: \tab GPL \cr
 #' }
@@ -28,25 +28,29 @@
 #' @author
 #' Timothy H. Keitt \cr \url{http://www.keittlab.org/} \cr \cr
 #' Maintainer: Timothy H. Keitt \email{tkeitt@@gmail.com} \cr
-#' @references \url{http://www.gdal.org/}
+#' @references \url{http://github.com/thk686/rgdal2}, \url{http://www.gdal.org/}
 #' @keywords package
 NULL
+
+printPkgBanner = function()
+{
+  quiet = getOption("suppress.package.banners")
+  if ( is.null(quiet) || (!quiet) )
+  {
+    msgfun = packageStartupMessage
+    n = 42
+    bling = function(n) msgfun(paste(rep("~", n), collapse = "."))
+    bling(n);
+    msgfun("\trgal2: a KeittLab production (http://www.keittlab.org/)")
+    msgfun(paste0("\tCompiled against GDAL version: ", versionInfo()))
+    msgfun("\tSet options(suppress.package.banners = TRUE) to load quietly")
+    bling(n)
+  }
+}
 
 .onAttach = function(libname, pkgname)
 {
     GDALInit()
-    quiet = getOption("suppress.package.banners")
-    if ( is.null(quiet) || (!quiet) )
-    {
-        msgfun = packageStartupMessage
-        n = 42
-        bling = function(n) msgfun(paste(rep("~", n), collapse = "."))
-        bling(n);
-        msgfun("\trgal2: a KeittLab production (http://www.keittlab.org/)")
-        msgfun(paste0("\tCompiled against GDAL version: ", versionInfo()))
-        msgfun("\tSet options(suppress.package.banners = TRUE) to load quietly")
-        bling(n)
-    }
 }
 
 .onDetach = function(libpath)

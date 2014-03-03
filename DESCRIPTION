@@ -1,7 +1,7 @@
 Package: rgdal2
 Type: Package
 Title: Wraps the Geospatial Data Abstraction Library
-Version: 0.0
+Version: 0.1
 Date: 2013-12-30
 Author: Tim Keitt
 Maintainer: Tim Keitt <tkeitt@gmail.com>
@@ -21,9 +21,9 @@ Collate:
     'pkg.R'
     'defs.R'
     'gdal_private.R'
-    'srs.R'
     'gdal_public.R'
     'graphics.R'
     'ogr_private.R'
     'ogr_public.R'
+    'srs.R'
     'utils.R'

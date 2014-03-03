@@ -284,6 +284,54 @@ function(object, SRS)
     object
 })
 
+#' Simple raster warping
+#' 
+#' Reproject a raster object
+#' 
+#' @param object the raster object (dataset or band)
+#' @param SRS the new spatial reference system
+#' @param file the output filed (ignored if \code{driver = "MEM"})
+#' @param driver the output driver
+#' @param thresh resampling threshold
+#' 
+#' @details
+#' This function calls a modified version of the GDAL warpsimple utility.
+#' 
+#' If \code{object} is a raster band, the entire dataset will be warped
+#' and the first band of the dataset returned. See \code{\link{getDataset}}.
+#' 
+#' @examples
+#' f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
+#' x = openGDAL(f)
+#' show(grid.layout(1, 2))
+#' draw(x)
+#' y = reproject(x, newSRS("WGS84"))
+#' draw(y)
+#' 
+#' @aliases reproject-dataset
+#' @rdname reproject-raster
+#' @export
+setMethod("reproject",
+signature("RGDAL2Dataset"),
+function(object, SRS, file = tempfile(), driver = "MEM", thresh = 0.125)
+{
+  srs.out = getWKT(SRS)
+  res = RGDAL_RasterWarp(object@handle, file, srs.out, driver, thresh)
+  newRGDAL2Dataset(res)
+})
+
+#' @aliases reproject-band
+#' @rdname reproject-raster
+#' @export
+setMethod("reproject",
+signature("RGDAL2RasterBand"),
+function(object, SRS, file = tempfile(), driver = "MEM", thresh = 0.125)
+{
+  srs.out = getWKT(SRS)
+  res = RGDAL_RasterWarp(object@dataset@handle, file, srs.out, driver, thresh)
+  getBand(newRGDAL2Dataset(res))
+})
+
 isGeographic = function(x)
 {
     if ( !inherits(x, "RGDAL2SpatialRef") ) x = getSRS(x)

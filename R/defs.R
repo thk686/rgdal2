@@ -42,7 +42,6 @@ function(object)
     standardGeneric("properties")
 })
 
-
 #
 # SRS Generics
 #
@@ -58,6 +57,13 @@ function(object, SRS)
     standardGeneric("setSRS")
 })
 
+#' Reproject an object
+#' 
+#' Convert object to a new spatial reference system
+#' 
+#' @param object the object to reproject
+#' @param SRS the new spatial reference system
+#' @param ... additional arguments
 setGeneric("reproject",
 function(object, SRS, ...)
 {

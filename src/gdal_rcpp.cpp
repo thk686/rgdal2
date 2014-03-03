@@ -151,18 +151,23 @@ DatasetH RGDAL_CreateDataset(const char* driver, const char* fname,
   if ( !dtype ) stop("Unknown data type specified");
   GDALDriverH hDR = GDALGetDriverByName(driver);
   if ( !hDR ) stop("Invalid GDAL driver\n");
-  std::vector<const char*> sopts(opts.size() + 1, 0);
-  for ( int i = 0; i != opts.size(); ++i ) sopts[i] = opts[i].c_str();
-  GDALDatasetH ds = GDALCreate(hDR, fname, ncol, nrow, nbands, dtype, const_cast<char**>(&sopts[0]));
+  std::vector<char*> sopts(opts.size() + 1, 0);
+  for ( int i = 0; i != opts.size(); ++i )
+    sopts[i] = const_cast<char*>(opts[i].c_str());
+  GDALDatasetH ds = GDALCreate(hDR, fname, ncol, nrow, nbands, dtype, &sopts[0]);
   if ( ds ) GDALFlushCache(ds);
   return DatasetH(ds);
 }
 
 // [[Rcpp::export]]
-DatasetH RGDAL_CreateCopy(DatasetH h, const char* fname, const char* dname)
+DatasetH RGDAL_CreateCopy(DatasetH h, const char* fname, const char* dname,
+                          std::vector<std::string> opts)
 {
     GDALDriverH hD = GDALGetDriverByName(dname);
-    GDALDatasetH res = GDALCreateCopy(hD, fname, *h, 0, NULL, NULL, NULL);
+    std::vector<char*> sopts(opts.size() + 1, 0);
+    for ( int i = 0; i != opts.size(); ++i )
+      sopts[i] = const_cast<char*>(opts[i].c_str());
+    GDALDatasetH res = GDALCreateCopy(hD, fname, *h, 0, &sopts[0], NULL, NULL);
     return DatasetH(res);
 }
 
@@ -1192,12 +1197,16 @@ int RGDAL_IsGeographic(SpRefSysH h)
 }
 
 // [[Rcpp::export]]
-DatasourceH RGDAL_CreateDataSource(const char* driver, const char* name)
+DatasourceH RGDAL_CreateDataSource(const char* driver, const char* name,
+                                   std::vector<std::string> opts)
 {
-    OGRSFDriverH hDriver = OGRGetDriverByName(driver);
-    if ( ! hDriver ) return hDriver;
-    OGRDataSourceH res = OGR_Dr_CreateDataSource(hDriver, name, NULL);
-    return res;
+  OGRSFDriverH hDriver = OGRGetDriverByName(driver);
+  if ( ! hDriver ) return hDriver;
+  std::vector<char*> sopts(opts.size() + 1, 0);
+  for ( int i = 0; i != opts.size(); ++i )
+    sopts[i] = const_cast<char*>(opts[i].c_str());
+  OGRDataSourceH res = OGR_Dr_CreateDataSource(hDriver, name, &sopts[0]);
+  return res;
 }
 
 // [[Rcpp::export]]
@@ -1328,9 +1337,19 @@ static void RGDAL_AddBands(BandH h1, BandH h2, BandH h3)
     }
 }
 
+// [[Rcpp::export]]
+SEXP RGDAL_GetRasterNoDataValue(BandH h)
+{
+  int i = 0;
+  double ndv = GDALGetRasterNoDataValue(*h, &i);
+  return i ? Rf_ScalarReal(ndv) : R_NilValue;
+}
 
-
-
+// [[Rcpp::export]]
+int RGDAL_SetRasterNoDataValue(BandH h, double ndv)
+{
+  return GDALSetRasterNoDataValue(*h, ndv);
+}
 
 
 

@@ -3,7 +3,7 @@
 #
 
 #' @include defs.R
-#' @include srs.R
+#' @include ogr_private.R
 NULL
 
 #' Open an OGR datasource
@@ -37,10 +37,14 @@ openOGR = function(fname, readonly = TRUE)
 #' 
 #' @param driver the file name
 #' @param fname name of file to use for storage
+#' @param opts vector of key=value pairs
 #' 
 #' @details
 #' The \code{MEM} driver creates the datasource in memeory, in which case
 #' the \code{fname} parameter is ignored.
+#' 
+#' The \code{rgdal2} package does not yet have much support for creating
+#' and writing layers. This is planned in a future release.
 #' 
 #' @return an object of class RGDAL2Datasource
 #' 
@@ -49,9 +53,9 @@ openOGR = function(fname, readonly = TRUE)
 #' show(x)
 #' 
 #' @export
-newOGRDatasource = function(driver = "MEM", fname = tempfile())
+newOGRDatasource = function(driver = "Memory", fname = tempfile(), opts = character())
 {
-    x = RGDAL_CreateDataSource(driver, fname)
+    x = RGDAL_CreateDataSource(driver, fname, opts)
     newRGDAL2Datasource(x)
 }
 
@@ -109,7 +113,7 @@ signature("RGDAL2Datasource"),
 function(x)
 {
     res = character(length(x))
-    for ( i in 1:length(res) )
+    for ( i in seq_along(res) )
         res[i] = getLayerName(getLayer(x, i))
     res
 })
