@@ -32,14 +32,14 @@ else
 	exit 1
 fi
 
-if [ ! -e "src/RcppExports.cpp" ]
+if test ! -e src/RcppExports.cpp
 then
   ${R_HOME}/bin/Rscript -e "Rcpp:::compileAttributes()"
 fi
 
-if [ ! -e "man/rgdal2-package.Rd" ]
+if test ! -e man/rgdal2-package.Rd
 then
-  ${R_HOME}/bin/Rscript -e "roxygen2:::oxygenize()"
+  ${R_HOME}/bin/Rscript -e "roxygen2:::roxygenize()"
 fi
 
 RCPP_LIBS=`${R_HOME}/bin/Rscript -e "Rcpp:::LdFlags()"`

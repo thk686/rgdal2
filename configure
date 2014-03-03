@@ -2070,14 +2070,14 @@ else
 	exit 1
 fi
 
-if  ! -e "src/RcppExports.cpp"
+if test ! -e src/RcppExports.cpp
 then
-  R --vanilla -e 'library(Rcpp); compileAttributes()'
+  `${R_HOME}/bin/Rscript -e "Rcpp:::compileAttributes()"`
 fi
 
-if  ! -e "man/rgdal2-package.Rd"
+if test ! -e man/rgdal2-package.Rd
 then
-  R --vanilla -e 'library(roxygen2); roxygenize()'
+  `${R_HOME}/bin/Rscript -e "roxygen2:::roxygenize()"`
 fi
 
 RCPP_LIBS=`${R_HOME}/bin/Rscript -e "Rcpp:::LdFlags()"`

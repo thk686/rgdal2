@@ -48,7 +48,9 @@ static void __err_handler(CPLErr eErrClass, int err_no, const char *msg)
             break;
         case 4:
             Rf_warning("GDAL Error %d: %s\n", err_no, msg);
+            #ifndef CONTINUE_ON_ERROR
             stop("Unrecoverable error\n");
+            #endif
             break;        
         default:
             Rf_warning("Received invalid error class %d (errno %d: %s)\n", eErrClass, err_no, msg);
@@ -145,7 +147,7 @@ DatasetH RGDAL_CreateDataset(const char* driver, const char* fname,
   GDALDriverH hDR = GDALGetDriverByName(driver);
   if ( !hDR ) stop("Invalid GDAL driver\n");
   std::vector<char*> sopts(opts.size() + 1, 0);
-  for ( int i = 0; i != opts.size(); ++i )
+  for ( std::size_t i = 0; i != opts.size(); ++i )
     sopts[i] = const_cast<char*>(opts[i].c_str());
   GDALDatasetH ds = GDALCreate(hDR, fname, ncol, nrow, nbands, dtype, &sopts[0]);
   if ( ds ) GDALFlushCache(ds);
@@ -158,7 +160,7 @@ DatasetH RGDAL_CreateCopy(DatasetH h, const char* fname, const char* dname,
 {
     GDALDriverH hD = GDALGetDriverByName(dname);
     std::vector<char*> sopts(opts.size() + 1, 0);
-    for ( int i = 0; i != opts.size(); ++i )
+    for ( std::size_t i = 0; i != opts.size(); ++i )
       sopts[i] = const_cast<char*>(opts[i].c_str());
     GDALDatasetH res = GDALCreateCopy(hD, fname, *h, 0, &sopts[0], NULL, NULL);
     return DatasetH(res);
@@ -337,7 +339,7 @@ int RGDAL_WriteBlock(BandH h, int i, int j, SEXP blk)
         case GDT_Int16:
           {
             int16_t* buf = (int16_t*) R_alloc(xsz * ysz, 2);
-            for ( size_t k = 0; k != xsz * ysz; ++k )
+            for ( int k = 0; k != xsz * ysz; ++k )
                 buf[k] = INTEGER(blk)[k];
             return GDALWriteBlock(*h, j - 1, i - 1, &(buf[0]));
           }
@@ -458,7 +460,7 @@ GeometryH RGDAL_GetLayerEnv(LayerH h)
 // [[Rcpp::export]]
 const char* RGDAL_GetProjectionRef(DatasetH h)
 {
-  GDALGetProjectionRef(*h);
+  return GDALGetProjectionRef(*h);
 }
 
 // [[Rcpp::export]]
@@ -627,7 +629,7 @@ static SEXP GetPointsInternal(OGRGeometryH hG)
       default:
         {
           res = PROTECT(Rf_allocVector(VECSXP, n));
-          for ( size_t i = 0; i != n; ++i )
+          for ( int i = 0; i != n; ++i )
           {
               OGRGeometryH hR = OGR_G_GetGeometryRef(hG, i);
               SET_VECTOR_ELT(res, i, GetPointsInternal(hR));
@@ -905,7 +907,7 @@ SEXP RGDAL_ApplyGeoTransform(DatasetH ds, SEXP point_list, int inverse)
     {
         gtrans = &(gt[0]);
     }
-    for ( size_t i = 0; i != Rf_length(x); ++i )
+    for ( int i = 0; i != Rf_length(x); ++i )
         GDALApplyGeoTransform(gtrans, REAL(xi)[i], REAL(yi)[i], &(REAL(x)[i]), &(REAL(y)[i]));
     SET_VECTOR_ELT(res, 0, x);
     SET_VECTOR_ELT(res, 1, y);
@@ -1199,7 +1201,7 @@ DatasourceH RGDAL_CreateDataSource(const char* driver, const char* name,
   OGRSFDriverH hDriver = OGRGetDriverByName(driver);
   if ( ! hDriver ) return hDriver;
   std::vector<char*> sopts(opts.size() + 1, 0);
-  for ( int i = 0; i != opts.size(); ++i )
+  for ( size_t i = 0; i != opts.size(); ++i )
     sopts[i] = const_cast<char*>(opts[i].c_str());
   OGRDataSourceH res = OGR_Dr_CreateDataSource(hDriver, name, &sopts[0]);
   return res;
