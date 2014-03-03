@@ -463,7 +463,7 @@ GeometryH RGDAL_GetLayerEnv(LayerH h)
 }
 
 // [[Rcpp::export]]
-const char* RGDAL_GetProjectionRef(DatasourceH h)
+const char* RGDAL_GetProjectionRef(DatasetH h)
 {
   GDALGetProjectionRef(*h);
 }
@@ -536,7 +536,8 @@ void RGDAL_L_ResetReading(LayerH h)
 // [[Rcpp::export]]
 SpRefSysH RGDAL_L_GetSpatialRef(LayerH h)
 {
-  return OGR_L_GetSpatialRef(*h);
+  OGRSpatialReferenceH srs = OGR_L_GetSpatialRef(*h);
+  return srs ? OSRClone(srs) : srs;
 }
 
 // [[Rcpp::export]]
@@ -704,7 +705,8 @@ FeatureH RGDAL_GetFeature(LayerH h, double index)
 // [[Rcpp::export]]
 GeometryH RGDAL_F_GetGeometryRef(FeatureH h)
 {
-  return OGR_G_Clone(OGR_F_GetGeometryRef(*h));
+  OGRGeometryH g = OGR_F_GetGeometryRef(*h);
+  return g ? OGR_G_Clone(g) : g;
 }
 
 // [[Rcpp::export]]
@@ -880,7 +882,8 @@ GeometryH RGDAL_MakeExtent(double xmin, double xmax, double ymin, double ymax)
 // [[Rcpp::export]]
 SpRefSysH RGDAL_G_GetSpatialReference(GeometryH h)
 {
-  return OGR_G_GetSpatialReference(*h);
+  OGRSpatialReferenceH srs = OGR_G_GetSpatialReference(*h);
+  return srs ? OSRClone(srs) : srs;
 }
 
 // [[Rcpp::export]]
@@ -1269,7 +1272,8 @@ int RGDAL_G_GetGeometryCount(GeometryH h)
 // [[Rcpp::export]]
 GeometryH RGDAL_G_GetGeometryRef(GeometryH h, int i)
 {
-    return OGR_G_Clone(OGR_G_GetGeometryRef(*h, i));
+    OGRGeometryH g = OGR_G_GetGeometryRef(*h, i);
+    return g ? OGR_G_Clone(g) : g;
 }
 
 // [[Rcpp::export]]
@@ -1350,13 +1354,5 @@ int RGDAL_SetRasterNoDataValue(BandH h, double ndv)
 {
   return GDALSetRasterNoDataValue(*h, ndv);
 }
-
-
-
-
-
-
-
-
 
 

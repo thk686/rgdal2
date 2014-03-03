@@ -119,8 +119,7 @@ signature("RGDAL2Geometry"),
 function(object)
 {
     x = RGDAL_G_GetSpatialReference(object@handle)
-    if ( is.null(x) ) NULL
-    else newRGDAL2SpatialRef(RGDAL_OSRClone(x))
+    if ( is.null(x) ) NULL else newRGDAL2SpatialRef(x)
 })
 
 #' @rdname get-set-srs
@@ -130,8 +129,7 @@ signature("RGDAL2Layer"),
 function(object)
 {
     x = RGDAL_L_GetSpatialRef(object@handle)
-    if ( is.null(x) ) NULL
-    else newRGDAL2SpatialRef(RGDAL_OSRClone(x))
+    if ( is.null(x) ) NULL else newRGDAL2SpatialRef(x)
 })
 
 #' @aliases setSRS
