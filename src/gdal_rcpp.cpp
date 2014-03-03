@@ -81,13 +81,6 @@ void RGDAL_Close(DatasetH h)
 }
 
 // [[Rcpp::export]]
-bool isNullPtr(SEXP x)
-{
-  Rf_warning("Checked for null pointer\n"); // trying to deprecate this
-  return EXTPTR_PTR(x) == NULL;
-}
-
-// [[Rcpp::export]]
 const char* RGDAL_GetDescription(DatasetH h)
 {
   return GDALGetDescription(*h);  
