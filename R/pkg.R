@@ -30,6 +30,11 @@
 #' Maintainer: Timothy H. Keitt \email{tkeitt@@gmail.com} \cr
 #' @references \url{http://github.com/thk686/rgdal2}, \url{http://www.gdal.org/}
 #' @keywords package
+#' @import RColorBrewer
+#' @import Rcpp
+#' @import foreach
+#' @import iterators
+#' @import methods
 NULL
 
 printPkgBanner = function()

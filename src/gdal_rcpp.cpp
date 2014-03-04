@@ -17,6 +17,14 @@ using namespace Rcpp;
 // Class for autowrapping
 #include "../inst/include/rgdal2.h"
 
+#if GDAL_VERSION_MAJOR < 1
+#error "GDAL version 1 or greater required"
+#endif
+
+#if GDAL_VERSION_MINOR < 9
+#error "GDAL version 1.9 or greater required"
+#endif
+
 //
 // Kludge until I come up with something better
 //
