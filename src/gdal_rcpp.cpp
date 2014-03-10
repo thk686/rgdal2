@@ -159,7 +159,7 @@ DatasetH RGDAL_CreateDataset(const char* driver, const char* fname,
     sopts[i] = const_cast<char*>(opts[i].c_str());
   GDALDatasetH ds = GDALCreate(hDR, fname, ncol, nrow, nbands, dtype, &sopts[0]);
   if ( ds ) GDALFlushCache(ds);
-  return DatasetH(ds);
+  return ds;
 }
 
 // [[Rcpp::export]]
@@ -466,9 +466,9 @@ GeometryH RGDAL_GetLayerEnv(LayerH h)
 }
 
 // [[Rcpp::export]]
-const char* RGDAL_GetProjectionRef(DatasetH h)
+std::string RGDAL_GetProjectionRef(DatasetH h)
 {
-  return GDALGetProjectionRef(*h);
+  return GDALGetProjectionRef(*h); // string constructor will copy
 }
 
 // [[Rcpp::export]]
@@ -1358,4 +1358,32 @@ int RGDAL_SetRasterNoDataValue(BandH h, double ndv)
   return GDALSetRasterNoDataValue(*h, ndv);
 }
 
+// [[Rcpp::export]]
+std::vector<std::string> RGDAL_GetMetadata(DatasetH h, const char* domain)
+{
+  char** md = GDALGetMetadata(*h, domain);
+  std::vector<std::string> res;
+  for ( char** i = md; i && *i; ++i ) res.push_back(*i);
+  return res;
+}
 
+// [[Rcpp::export]]
+int RGDAL_SetMetadata(DatasetH h, std::vector<std::string> md, const char* domain)
+{
+  std::vector<char*> smd(md.size() + 1, 0);
+  for ( std::size_t i = 0; i != md.size(); ++i )
+    smd[i] = const_cast<char*>(md[i].c_str());
+  return GDALSetMetadata(*h, &smd[0], domain);
+}
+
+#if GDAL_VERSION_MAJOR > 1
+// // [[Rcpp::export]]
+std::vector<std::string> RGDAL_GetMetadataDomainList(DatasetH h)
+{
+  char** mdl = GDALGetMetadataDomainList(*h);
+  std::vector<std::string> res;
+  for ( char** i = mld; *i; ++i ) res.push_back(*i);
+  CSLDestroy(mdl);
+  return res;
+}
+#endif

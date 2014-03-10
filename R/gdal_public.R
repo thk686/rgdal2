@@ -1089,3 +1089,34 @@ setNoDataValue = function(object, no.data.value)
   object = checkBand(object)
   RGDAL_SetRasterNoDataValue(object@handle, no.data.value)
 }
+
+#' Get and set metadata
+#' 
+#' @param object a raster object
+#' @param metadata a vector of key=value strings
+#' @param domain the metadata domain
+#' 
+#' @examples
+#' x = newGDALDataset(10, 10)
+#' getMetadata(x)
+#' setMetadata(x, c("key1=value1", "key2=value2"))
+#' getMetadata(x)
+#' getMetadata(x, "private")
+#' setMetadata(x, c("key1=value1", "key2=value2"), "private")
+#' getMetadata(x, "private")
+#' 
+#' @rdname get-set-metadata
+#' @export
+getMetadata = function(object, domain = "")
+{
+  object = checkDataset(object)
+  RGDAL_GetMetadata(object@handle, domain)
+}
+
+#' @rdname get-set-metadata
+#' @export
+setMetadata = function(object, metadata, domain = "")
+{
+  object = checkDataset(object)
+  RGDAL_SetMetadata(object@handle, metadata, domain)
+}
