@@ -15,9 +15,7 @@ they are missing. If you have Rcpp and roxygen2 installed, it should just work. 
 To use this code, clone the repo, open the RStudio project file (rgdal2.Rproj) and choose build and install.
 You have to install roxygen2 and Rcpp.
 
-The commands necessary to generate the Rcpp and Rd files without
-using RStudio are given in the file prep-for-build.R. You can run
-this directly like R CMD BATCH prep-for-build.R, then
-cd .. and install.
+With the "devtools" package installed, the following R command builds the package on my platform: 
 
+devtools::install_github("rgdal2", "thk686")
 
