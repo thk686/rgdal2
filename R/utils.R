@@ -39,8 +39,8 @@ catLines = function(x)
             cat("Truncated...\n")
             break;
         }
-        out = x[i]
-        if ( nchar(out) > max.chars - 4 )
+        out = encodeString(x[i])
+        if ( nchar(out, "width") > max.chars - 4 )
         {
           out = substr(out, 0, max.chars - 8)
           out = paste(out, "...")
