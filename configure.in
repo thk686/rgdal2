@@ -37,9 +37,27 @@ then
   ${R_HOME}/bin/Rscript -e "Rcpp:::compileAttributes()"
 fi
 
+if test ! -e src/RcppExports.cpp
+then
+  echo ''
+  echo 'For some reason Rcpp is not working.'
+  echo 'Is it installed?'
+  echo ''
+  exit 1
+fi
+
 if test ! -e man/rgdal2-package.Rd
 then
   ${R_HOME}/bin/Rscript -e "roxygen2:::roxygenize()"
+fi
+
+if test ! -e man/rgdal2-package.Rd
+then
+  echo ''
+  echo 'For some reason roxygen2 is not working.'
+  echo 'Is it installed?'
+  echo ''
+  exit 1
 fi
 
 RCPP_LIBS=`${R_HOME}/bin/Rscript -e "Rcpp:::LdFlags()"`
