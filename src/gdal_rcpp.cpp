@@ -326,6 +326,7 @@ SEXP RGDAL_ReadBlock(BandH h, int i, int j)
         default:
             stop("Unsupported data type in block read\n");
     }
+    return R_NilValue; // for compiler warning
 }
 
 // [[Rcpp::export]]
@@ -354,6 +355,7 @@ int RGDAL_WriteBlock(BandH h, int i, int j, SEXP blk)
         default:
             stop("Unsupported data type in block read\n");
     }
+    return 1; // for compiler warning
 }
 
 // [[Rcpp::export]]
@@ -739,6 +741,7 @@ static OGRwkbGeometryType typeFromName(std::string name)
   if ( name == "multipolgon25d" ) return wkbMultiPolygon25D;
   if ( name == "geometrycollection25d" ) return wkbGeometryCollection25D;	
   stop("Invalid geometry type\n");
+  return wkbUnknown; // for compiler warning
 }
 
 // [[Rcpp::export]]
@@ -1045,6 +1048,7 @@ DatasetH RGDAL_RasterWarp(DatasetH h, const char* file, const char* srs,
   return RGDAL_RasterWarp_Internal(*h, file, srs, driver, err);
 }
 
+// This is redundant
 // [[Rcpp::export]]
 const char* RGDAL_GetDSDriverName(DatasourceH h)
 {
@@ -1376,8 +1380,20 @@ int RGDAL_SetMetadata(DatasetH h, std::vector<std::string> md, const char* domai
   return GDALSetMetadata(*h, &smd[0], domain);
 }
 
+// [[Rcpp::export]]
+LayerH RGDAL_DS_CreateLayer(DatasourceH h,
+                            const char* lname,
+                            SpRefSysH srs,
+                            std::string geom_type,
+                            std::vector<std::string> opts)
+{
+  std::vector<char*> sopts(opts.size() + 1, 0);
+  for ( std::size_t i = 0; i != opts.size(); ++i )
+    sopts[i] = const_cast<char*>(opts[i].c_str());
+  return OGR_DS_CreateLayer(*h, lname, *srs, typeFromName(geom_type), &sopts[0]);
+}
+
 #if GDAL_VERSION_MAJOR > 1
-// // [[Rcpp::export]]
 std::vector<std::string> RGDAL_GetMetadataDomainList(DatasetH h)
 {
   char** mdl = GDALGetMetadataDomainList(*h);

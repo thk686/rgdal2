@@ -181,6 +181,30 @@ openOGRLayer = function(fname, layer = 1L, readonly = TRUE)
     getLayer(openOGR(fname, readonly), layer)
 }
 
+#' Add a layer
+#' 
+#' Add a new layer to a datasource
+#' 
+#' @param x a datasource
+#' @param lyrname the name of the layer to create
+#' @param geomType a string nameing the stored geometry type
+#' @param srs a spatial reference system object
+#' @param opts a vector of strings, each with a KEY=VALUE pair
+#' 
+#' @examples
+#' x = newOGRDatasource()
+#' names(x)
+#' addLayer(x, "test", "POLYGON")
+#' names(x)
+#' 
+#' @export
+addLayer = function(x, lyrname, geomType, srs = NULL, opts = character())
+{
+  if ( is.null(srs) ) srs = newSRS("")
+  handle = RGDAL_DS_CreateLayer(x@handle, lyrname, srs@handle, geomType, opts)
+  newRGDAL2Layer(handle, x)
+}
+
 #' Fetch layer name
 #' 
 #' @param x a layer object
@@ -204,8 +228,9 @@ function(object)
 {
     ogrinfo = Sys.which('ogrinfo')
     dsname = RGDAL_DS_GetName(object@datasource@handle)
+    drname = RGDAL_GetDSDriverName(object@datasource@handle)
     lyrname = getLayerName(object)
-    if ( nchar(ogrinfo) > 0 )
+    if ( nchar(ogrinfo) > 0 && drname != "Memory" )
     {
         info = pipe(paste(ogrinfo, '-so', dsname, lyrname), 'rt')
         res = readLines(info); close(info)
@@ -684,7 +709,7 @@ print.RGDAL2LayerDF = function(x, ...)
 #' If the object has a spatial filter set, then the extent of the spatial
 #' filter is returned. Otherwise, the extent of the object is returned.
 #' 
-#' @value a geometry object
+#' @return a geometry object
 #' 
 #' @examples
 #' f = system.file("example-data/continents", package = "rgdal2")

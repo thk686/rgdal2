@@ -56,10 +56,11 @@ setGeneric("testCapability", function(object, capability)
     standardGeneric("testCapability")
 })
 
-setMethod("testCapability", "RGDAL2Datasource",
-          function(object, capability = c('create.layer',
-                                          'delete.layer',
-                                          'create.geom.field'))
+setMethod("testCapability",
+signature("RGDAL2Datasource"),
+function(object, capability = c('create.layer',
+                                'delete.layer',
+                                'create.geom.field'))
 {
     capability = switch(match.arg(capability),
                         create.layer = 'ODsCCreateLayer',
