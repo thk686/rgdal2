@@ -19,3 +19,4 @@ With the "devtools" package installed, the following R command builds the packag
 
 devtools::install_github("rgdal2", "thk686")
 
+Note that version 4 of roxygen2 has broken the package. I might have to dump roxygen2.
