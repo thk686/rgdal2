@@ -606,7 +606,7 @@ getGeometries = function(x)
 #' class(y)
 #' show(y)
 #' 
-#' foreach(i = geometryIter(x), reset = TRUE) %do% area(i)
+#' foreach(i = geometryIter(x, reset = TRUE), .combine = c) %do% area(i)
 #' 
 #' @rdname layer-iters
 #' @export
