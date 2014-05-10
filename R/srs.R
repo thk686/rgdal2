@@ -174,8 +174,8 @@ function(object, SRS)
     invisible(object)
 })
 
-#' @rdname get-set-srs
 #' @export
+#' @rdname get-set-srs
 setMethod("setSRS",
 signature(object = "RGDAL2RasterBand", SRS = "RGDAL2SpatialRef"),
 function(object, SRS)
@@ -189,8 +189,8 @@ function(object, SRS)
 #' Calling \code{setSRS} with \code{SRS = NULL} is a no-op that simply
 #' returns the object without effect.
 #' 
-#' @rdname get-set-srs
 #' @export
+#' @rdname get-set-srs
 setMethod("setSRS",
 signature(object = "ANY", SRS = "NULL"),
 function(object, SRS)
