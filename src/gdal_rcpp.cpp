@@ -175,9 +175,9 @@ DatasetH RGDAL_CreateCopy(DatasetH h, const char* fname, const char* dname,
 }
 
 // [[Rcpp::export]]
-SEXP RGDAL_GetGeoTransform(DatasetH h)
+std::vector<double> RGDAL_GetGeoTransform(DatasetH h)
 {
-    NumericVector res(6);
+    std::vector<double> res(6, 0.0);
     _(GDALGetGeoTransform(*h, &res[0]));
     return res;
 }
