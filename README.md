@@ -21,3 +21,7 @@ devtools::install_github("rgdal2", "thk686")
 
 Note that version 4 of roxygen2 has broken the package. ~~I might have to dump roxygen2.~~ Hadley has committed
 a patch to the devel version of roxygen2 that fixes the problem.
+
+Try
+
+install_github("roxygen2", "yihui")
