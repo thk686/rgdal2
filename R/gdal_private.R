@@ -127,5 +127,7 @@ region2Indices = function(x, i)
     list(i = i, j = j)
 }
 
-
-
+getDriverName = function(x)
+{
+  RGDAL_GetGDALDriverName(x@handle)
+}

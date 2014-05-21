@@ -35,6 +35,8 @@
 #' @import foreach
 #' @import iterators
 #' @import methods
+#' @import grid
+#' @import grDevices
 NULL
 
 printPkgBanner = function()
@@ -55,6 +57,7 @@ printPkgBanner = function()
 
 .onAttach = function(libname, pkgname)
 {
+    printPkgBanner()
     GDALInit()
 }
 

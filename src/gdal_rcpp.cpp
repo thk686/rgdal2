@@ -336,6 +336,8 @@ int RGDAL_WriteBlock(BandH h, int i, int j, SEXP blk)
     GDALGetBlockSize(*h, &xsz, &ysz);
     if ( Rf_length(blk) < xsz * ysz )
         stop("Input does not match block size\n");
+    std::cout << xsz << " " << ysz << " " << Rf_length(blk) << std::endl;
+    return 0;
     GDALDataType dt = GDALGetRasterDataType(*h);
     switch ( dt )
     {
@@ -380,13 +382,6 @@ int RGDAL_DS_GetLayerCount(DatasourceH h)
 const char* RGDAL_DS_GetName(DatasourceH h)
 {
   return OGR_DS_GetName(*h);
-}
-
-// [[Rcpp::export]]
-const char* RGDAL_DS_GetDriver(DatasourceH h)
-{
-    OGRSFDriverH hDr = OGR_DS_GetDriver(*h);
-    return OGR_Dr_GetName(hDr);
 }
 
 // [[Rcpp::export]]
@@ -1048,12 +1043,18 @@ DatasetH RGDAL_RasterWarp(DatasetH h, const char* file, const char* srs,
   return RGDAL_RasterWarp_Internal(*h, file, srs, driver, err);
 }
 
-// This is redundant
 // [[Rcpp::export]]
-const char* RGDAL_GetDSDriverName(DatasourceH h)
+const char* RGDAL_GetOGRDriverName(DatasourceH h)
 {
     OGRSFDriverH hDr = OGR_DS_GetDriver(*h);
     return OGR_Dr_GetName(hDr);
+}
+
+// [[Rcpp::export]]
+const char* RGDAL_GetGDALDriverName(DatasetH h)
+{
+  GDALDriverH hDr = GDALGetDatasetDriver(*h); 	
+  return GDALGetDriverShortName(hDr); 	
 }
 
 // [[Rcpp::export]]

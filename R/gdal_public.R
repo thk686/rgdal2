@@ -8,50 +8,50 @@ NULL
 
 #' Open a GDAL dataset
 #'
-#' Opens the dataset associated with the specified file
+#' Opens a dataset and returns the dataset or a band from the dataset
 #' 
 #' @param fname the file name
 #' @param readonly if true, prohibit write operations
 #' @param shared if true, share the internal GDAL handle
 #' 
-#' @return an object of class RGDAL2Dataset
+#' @details
+#' A dataset holds raster data organized into multiple layers or bands.
+#' The \code{openRasterBand} function simply opens a dataset and returns
+#' the indicated band. This is a convenience in the common situation of
+#' working with single-band datasets.
+#' 
+#' @return \code{openDataset}: a dataset object
 #' 
 #' @examples
 #' f = system.file("example-data/bee.jpg", package = "rgdal2")
-#' x = openGDAL(f)
+#' x = openDataset(f)
 #' show(x)
 #' draw(x)
 #'
-#' @seealso \code{\link{openGDALBand}}, \code{\link{openOGR}} 
+#' @seealso \code{\link{openRasterBand}}, \code{\link{openOGR}}
+#' @rdname gdalopen
 #' @export
-openGDAL = function(fname, readonly = TRUE, shared = TRUE)
+openDataset = function(fname, readonly = TRUE, shared = TRUE)
 {
   x = RGDAL_Open(fname, readonly, shared)
   newRGDAL2Dataset(x)
 }
 
-#' Open a GDAL dataset and return a band
-#'
-#' Opens the dataset associated with the specified file and returns a band
-#' 
-#' @param fname the file name
 #' @param band the band number (1-based)
-#' @param readonly if true, prohibit write operations
 #' 
-#' @return an object of class RGDAL2RasterBand
+#' @return \code{openRasterBand}: a raster band
 #' 
 #' @examples
 #' f = system.file("example-data/bee.jpg", package = "rgdal2")
-#' x = openGDALBand(f)
+#' x = openRasterBand(f)
 #' show(x)
 #' draw(x)
 #'
-#' @seealso \code{\link{openGDAL}}, \code{\link{openOGR}} 
-#' 
+#' @rdname gdalopen
 #' @export
-openGDALBand = function(fname, band = 1L, readonly = TRUE)
+openRasterBand = function(fname, band = 1L, readonly = TRUE)
 {
-  getBand(openGDAL(fname, readonly), band)
+  getBand(openDataset(fname, readonly), band)
 }
 
 #' Create a new GDAL dataset
@@ -88,22 +88,25 @@ openGDALBand = function(fname, band = 1L, readonly = TRUE)
 #' 
 #' @examples
 #' createOpts = c("COMPRESS=LZW", "TILED=YES", "BLOCKXSIZE=16", "BLOCKYSIZE=16")
-#' x = newGDALDataset(64, 64, 8, driver = "GTiff", opts = createOpts)
+#' x = newDataset(64, 64, 5, driver = "GTiff", opts = createOpts)
 #' show(x)
-#' x = newGDALDataset(100, 100, 3, driver = "GTiff", nosave = TRUE)
+#' x = newDataset(100, 100, 3, driver = "GTiff", nosave = TRUE)
 #' show(x); dim(x)
 #'
-#' @seealso \code{\link{openGDALBand}}, \code{\link{openOGR}} 
+#' @seealso \code{\link{openRasterBand}}, \code{\link{openOGR}} 
 #' 
 #' @export
-newGDALDataset = function(nrow, ncol, nbands = 1L,
-                          dataType = 'Int32', driver = 'MEM',
-                          file = tempfile(), opts = character(),
-                          nosave = FALSE)
+newDataset = function(nrow, ncol, nbands = 1L,
+                      dataType = 'Int32', driver = 'MEM',
+                      file = tempfile(), opts = character(),
+                      nosave = FALSE)
 {
   x = RGDAL_CreateDataset(driver, file, nrow, ncol, nbands, dataType, opts)
   if ( nosave ) unlink(file)
-  newRGDAL2Dataset(x)
+  res = newRGDAL2Dataset(x)
+  if ( length(paste0(opts)) > 0 )
+    setMetadata(res, opts, "rgdal2_create_opts")
+  return(res)
 }
 
 #' Copy a GDAL dataset
@@ -117,26 +120,38 @@ newGDALDataset = function(nrow, ncol, nbands = 1L,
 #' 
 #' @details
 #' This function may be convenient for working with a dataset in memory. Note that
-#' not all atrributes are copied at this time.
+#' not all atrributes are copied at this time. If the driver specified is the same
+#' as the driver of the source dataset and the source dataset was created in
+#' \code{rgdal2}, then the creation options will be passed from the source to the
+#' copy. You can suppress this behavior by setting \code{opts} explicitely, either
+#' to valid options or an invalid option like \code{""}. Invalid options will
+#' generate a warning message, but the dataset will still be copied. The invalid
+#' option strings will propagate to subsequent copies without harm.
 #' 
 #' The \code{file} parameter is ignored if the \code{driver} parameter
 #' is set to "MEM".
 #' 
-#' @return an object of class RGDAL2Dataset
+#' @return an GDAL dataset object
 #' 
 #' @examples
-#' x = newGDALDataset(10, 10, 3)
+#' x = newDataset(10, 10, 3)
 #' y = copyDataset(x)
 #' show(x); show(y)
 #'
-#' @seealso \code{\link{openGDALBand}}, \code{\link{openOGR}} 
+#' @seealso \code{\link{openRasterBand}}, \code{\link{openOGR}} 
 #' 
 #' @export
 copyDataset = function(x, file = tempfile(), driver = "MEM", opts = character())
 {
     x = checkDataset(x)
+    if ( length(paste0(opts)) < 1 &&
+         identical(driver, getDriverName(x)) )
+      opts = getMetadata(x, "rgdal2_create_opts")
     handle = RGDAL_CreateCopy(x@handle, file, driver, opts)
-    newRGDAL2Dataset(handle)
+    res = newRGDAL2Dataset(handle)
+    if ( length(paste0(opts)) > 0 )
+      setMetadata(res, opts, "rgdal2_create_opts")
+    return(res)
 }
 
 #' Retrieve the affine transformation
@@ -154,7 +169,7 @@ copyDataset = function(x, file = tempfile(), driver = "MEM", opts = character())
 #' 
 #' @examples
 #' f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
-#' x = openGDAL(f)
+#' x = openDataset(f)
 #' getTransform(x)
 #' 
 #' @rdname get-set-transform
@@ -179,7 +194,7 @@ getTransform = function(object)
 #' 
 #' @examples
 #' f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
-#' x = openGDAL(f)
+#' x = openDataset(f)
 #' y = copyDataset(x)
 #' setTransform(y, getTransform(x))
 #' getTransform(y)
@@ -211,7 +226,7 @@ setTransform = function(object, transform)
 #' 
 #' @examples
 #' f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
-#' x = openGDAL(f)
+#' x = openDataset(f)
 #' y = copyDataset(x)
 #' copyTransform(x, y)
 #' getTransform(y)
@@ -228,8 +243,8 @@ copyTransform = function(obj1, obj2)
 
 #' Create a new GDAL raster band
 #' 
-#' This is a convenience wrapper around \code{\link{newGDALDataset}}. It
-#' calls \code{\link{newGDALDataset}} and then returns the first band.
+#' This is a convenience wrapper around \code{\link{newDataset}}. It
+#' calls \code{\link{newDataset}} and then returns the first band.
 #'
 #' @param nrow number of rows (scan lines)
 #' @param ncol number of columns (pixels)
@@ -241,20 +256,20 @@ copyTransform = function(obj1, obj2)
 #' This function does not add a new band to an existing dataset. Very few drivers
 #' support adding bands. Currently that capability is not yet implemented in \code{rgdal2}.
 #' 
-#' @return an object of class RGDAL2RasterBand
+#' @return a raster band object
 #' 
-#' @seealso \code{\link{newGDALDataset}}
+#' @seealso \code{\link{newRaster}}
 #' 
 #' @examples
-#' x = newGDALBand(100, 100)
+#' x = newRasterBand(100, 100)
 #' show(x); dim(x)
 #' y = getDataset(x)
 #' show(y)
 #'   
 #' @export
-newGDALBand = function(nrow, ncol, dataType = 'Int32', driver = 'MEM', file = tempfile())
+newRasterBand = function(nrow, ncol, dataType = 'Int32', driver = 'MEM', file = tempfile())
 {
-  getBand(newGDALDataset(nrow, ncol, 1L, dataType, driver, file))
+  getBand(newDataset(nrow, ncol, 1L, dataType, driver, file))
 }
 
 #' Fetch a raster band object from a dataset
@@ -265,16 +280,17 @@ newGDALBand = function(nrow, ncol, dataType = 'Int32', driver = 'MEM', file = te
 #' @details
 #' Band indices start at 1.
 #' 
-#' @return an object of class RGDAL2RasterBand
+#' @return a raster band object
 #' 
-#' @seealso \code{\link{newGDALBand}}, \code{\link{nband}}
+#' @seealso \code{\link{newRasterBand}}, \code{\link{nband}}
 #' 
 #' @examples
-#' x = newGDALDataset(100, 100, 3)
+#' x = newDataset(100, 100, 3)
 #' show(x); dim(x)
 #' y = getBand(x, 2)
 #' show(y)
-#'   
+#'
+#' @rdname get-raster-band
 #' @export
 getBand = function(x, band = 1L)
 {
@@ -292,16 +308,17 @@ getBand = function(x, band = 1L)
 #' be deleted. This function fetches the dataset to which the
 #' raster band belongs.
 #' 
-#' @return an object of class RGDAL2Dataset
+#' @return a dataset object
 #' 
 #' @seealso \code{\link{getBand}}
 #' 
 #' @examples
-#' x = newGDALBand(100, 100)
+#' x = newRasterBand(100, 100)
 #' show(x)
 #' y = getDataset(x)
 #' show(y)
-#'   
+#'
+#' @rdname get-raster-band
 #' @export
 getDataset = function(x)
 {
@@ -326,13 +343,13 @@ getDataset = function(x)
 #' will automatically extract the first band if a dataset is passed. Other
 #' bands are ignored.
 #' 
-#' @return an object of class RGDAL2RasterMask
+#' @return a raster mask object
 #' 
 #' @seealso \code{\link{getMaskFlags}}
 #' 
 #' @examples
 #' f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
-#' x = openGDALBand(f)
+#' x = openRasterBand(f)
 #' show(x)
 #' getMaskFlags(x)
 #' y = getMask(x)
@@ -367,7 +384,7 @@ getMask = function(x)
 #' 
 #' @examples
 #' f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
-#' x = openGDALBand(f)
+#' x = openRasterBand(f)
 #' show(x)
 #' getMaskFlags(x)
 #' 
@@ -375,8 +392,7 @@ getMask = function(x)
 getMaskFlags = function(x)
 {
   x = checkBand(x)
-  if ( inherits(x, "RGDAL2RasterMask") ) flag = x@flag
-  else flag = RGDAL_GetMaskFlags(x@handle)
+  flag = RGDAL_GetMaskFlags(x@handle)
   list(no.mask = bitwAnd(flag, 1L) != 0L,
        is.shared = bitwAnd(flag, 2L) != 0L,
        is.alpha = bitwAnd(flag, 4L) != 0L,
@@ -425,7 +441,7 @@ function(object)
 #' 
 #' @examples
 #' f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
-#' x = openGDAL(f)
+#' x = openDataset(f)
 #' dim(x)
 #'
 #' @aliases dim-dataset
@@ -441,13 +457,13 @@ function(x)
     c(num_rows, num_cols, num_bands)
 })
 
-#' Return dimensions of a band
+#' Return dimensions of a raster band
 #' 
 #' @seealso \code{\link{dim}}
 #' 
 #' @examples
 #' f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
-#' x = openGDALBand(f)
+#' x = openRasterBand(f)
 #' dim(x)
 #'
 #' @aliases dim-band
@@ -468,7 +484,7 @@ function(x)
 #' 
 #' @examples
 #' f = system.file("example-data/bee.jpg", package = "rgdal2")
-#' x = openGDAL(f)
+#' x = openDataset(f)
 #' nband(x)
 #'
 #' @rdname dim-band-dataset
@@ -498,7 +514,7 @@ nband = function(x)
 #' 
 #' @examples
 #' f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
-#' x = openGDAL(f)
+#' x = openDataset(f)
 #' getBlockSize(x)
 #'
 #' @export
@@ -628,7 +644,7 @@ function(x, i, j, ..., drop = TRUE)
 #' way that GDAL indexes into raster bands.
 #' 
 #' @examples
-#' x = newGDALBand(5, 5)
+#' x = newRasterBand(5, 5)
 #' x[[]]
 #' x[] = 1:25
 #' x[[]]
@@ -778,7 +794,7 @@ function(x, i, j, ..., value)
 
 #' @examples
 #' f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
-#' x = openGDAL(f)
+#' x = openDataset(f)
 #' extent(x)
 #' 
 #' @rdname extent
@@ -843,11 +859,11 @@ function(object)
 #' block. All integral types other than raw are handled as \code{integer} type.
 #' 
 #' @return
-#' a \code{RGDAL2BlockMatrix} object, a raster block or the block dimensions
+#' a raster block matrix object, a raster block or the block dimensions
 #'
 #' @examples
 #' f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
-#' x = openGDAL(f)
+#' x = openDataset(f)
 #' dim(x)
 #' m = getBlockMatrix(x)
 #' dim(m)
@@ -883,6 +899,7 @@ function(x, i, j)
   RGDAL_ReadBlock(x@band@handle, i, j)
 })
 
+
 #' @aliases write-block-matrix
 #' @rdname block-matrix
 #' @param value an r object of appropriate type and length
@@ -905,6 +922,67 @@ function(x)
 {
   ceiling(dim(x@band) / getBlockSize(x@band))
 })
+
+#' Raster blocks
+#' 
+#' Read and write raster blocks
+#' 
+#' @param x a raster band or dataset
+#' @param i the block row
+#' @param j the block column
+#' 
+#' @details
+#' GDAL raster bands have an internal blocking strcuture. This is usually
+#' a simple scanline, pixel arrangement where each image row is a single
+#' block of data. Other datasets may have internal storage arranged as
+#' tiled blocks of data. Block access is much faster than random IO as
+#' these blocks are cached by the GDAL IO layer. A strategy for efficient
+#' update of large files is to read a block of data, modify it, and then
+#' write the block either into a new dataset or into the original dataset
+#' overwriting the original data.
+#'
+#' Note that especially for tiled data, the blocks will not perfectly
+#' subdivide the raster. Portions of marginal blocks on the right and
+#' bottom will often extend beyond the raster extent. Out-of-bound block pixel
+#' values will usually be set to \code{NA} in that case. (Raw byte data does
+#' not have an \code{NA} value defined, so in that case the out-of-bounds
+#' pixels will be set to zero.) However the behavior is driver dependend
+#' and therefore may vary by file type. The returned blocks are not truncated
+#' to fit within the raster.
+#' 
+#' Whem writing blocks, the \code{\link{storage.mode}} of the value parameter
+#' must match that of the raster band. The dimensions of the object do not
+#' matter; however its length must be equal to the number of elements in a
+#' block. All integral types other than raw are handled as \code{integer} type.
+#' 
+#' @return
+#' \code{readBlock}: a matrix of raster data
+#' 
+#' @examples
+#' f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
+#' x = copyDataset(openDataset(f))
+#' b = readBlock(x, 1, 1)
+#' dim(b)
+#' writeBlock(x, 2, 1, b)
+#' 
+#' @rdname read-write-block
+#' @export
+readBlock = function(x, i, j)
+{
+  x = checkBand(x)
+  RGDAL_ReadBlock(x@handle, i, j)
+}
+
+#' @return \code{writeBlock}: the raster band invisibly
+#' @rdname read-write-block
+#' @export
+writeBlock = function(x, i, j, data)
+{
+  x = checkBand(x)
+  if ( RGDAL_WriteBlock(x@handle, i, j, data) )
+    stop("Error writing band")
+  invisible(x)
+}
 
 #' Iterate over coordinate regions
 #' 

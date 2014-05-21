@@ -10,7 +10,7 @@ NULL
 #
 setClass('RGDAL2Dataset', slots = c(handle = 'externalptr'))
 setClass('RGDAL2RasterBand', slots = c(handle = 'externalptr', dataset = 'RGDAL2Dataset'))
-setClass('RGDAL2RasterMask', contains = 'RGDAL2RasterBand', slots = c(flag = 'integer'))
+setClass('RGDAL2RasterMask', contains = 'RGDAL2RasterBand')
 setClass('RGDAL2BlockMatrix', slots = c(band = 'RGDAL2RasterBand'))
 
 #
