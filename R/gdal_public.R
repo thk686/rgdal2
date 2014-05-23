@@ -361,8 +361,7 @@ getMask = function(x)
 {
   x = checkBand(x)
   m = RGDAL_GetMaskBand(x@handle)
-  f = RGDAL_GetMaskFlags(x@handle)
-  newRGDAL2RasterMask(m, x@dataset, f)
+  newRGDAL2RasterMask(m, x@dataset)
 }
 
 #' Fetch flags indicating the mask interpretation
@@ -821,106 +820,6 @@ signature("RGDAL2RasterBand"),
 function(object)
 {
     extent(object@dataset)
-})
-
-#' Get a block-matrix object
-#' 
-#' Construct an object that acts as a matrix of raster blocks
-#' 
-#' @param b the band or dataset
-#' 
-#' @details
-#' GDAL raster bands have an internal blocking strcuture. This is usually
-#' a simple scanline, pixel arrangement where each image row is a single
-#' block of data. Other datasets may have internal storage arranged as
-#' tiled blocks of data. Block access is much faster than random IO as
-#' these blocks are cached by the GDAL IO layer. A strategy for efficient
-#' update of large files is to read a block of data, modify it, and then
-#' write the block either into a new dataset or into the original dataset
-#' overwriting the original data.
-#' 
-#' The returned object acts as a matrix in so far as it
-#' has methods for the \code{[[]]} operator and you can retrieve
-#' its dimensions. Indexing the block-matrix object will return
-#' the corresponding block of raster data.
-#' 
-#' Note that especially for tiled data, the blocks will not perfectly
-#' subdivide the raster. Portions of marginal blocks on the right and
-#' bottom will often extend beyond the raster extent. Out-of-bound block pixel
-#' values will usually be set to \code{NA} in that case. (Raw byte data does
-#' not have an \code{NA} value defined, so in that case the out-of-bounds
-#' pixels will be set to zero.) However the behavior is driver dependend
-#' and therefore may vary by file type. The returned blocks are not truncated
-#' to fit within the raster.
-#' 
-#' Whem writing blocks, the \code{\link{storage.mode}} of the value parameter
-#' must match that of the raster band. The dimensions of the object do not
-#' matter; however its length must be equal to the number of elements in a
-#' block. All integral types other than raw are handled as \code{integer} type.
-#' 
-#' @return
-#' a raster block matrix object, a raster block or the block dimensions
-#'
-#' @examples
-#' f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
-#' x = openDataset(f)
-#' dim(x)
-#' m = getBlockMatrix(x)
-#' dim(m)
-#' dim(m[[1, 1]])
-#' y = copyDataset(x)  # currently does not set block size
-#' m = getBlockMatrix(y)
-#' dim(m)
-#' dim(m[[1, 1]])
-#' z = m[[1, 1]]
-#' class(z)
-#' z[] = 42L
-#' m[[1, 1]] = z
-#' m[[1, 1]][1, 1]
-#' 
-#' @aliases block-matrix
-#' @rdname block-matrix
-#' @export
-getBlockMatrix = function(b)
-{
-  b = checkBand(b)
-  new("RGDAL2BlockMatrix", band = b)
-}
-
-#' @aliases read-block-matrix
-#' @rdname block-matrix
-#' @param i the block row
-#' @param j the block column
-#' @export
-setMethod('[[',
-signature('RGDAL2BlockMatrix'),
-function(x, i, j)
-{
-  RGDAL_ReadBlock(x@band@handle, i, j)
-})
-
-
-#' @aliases write-block-matrix
-#' @rdname block-matrix
-#' @param value an r object of appropriate type and length
-#' @export
-setMethod('[[<-',
-signature('RGDAL2BlockMatrix'),
-function(x, i, j, value)
-{
-  if ( RGDAL_WriteBlock(x@band@handle, i, j, value) )
-    stop("Error writing block")
-  invisible(x)
-})
-
-#' @aliases dim-block-matrix
-#' @rdname block-matrix
-#' @export
-setMethod('dim',
-signature('RGDAL2BlockMatrix'),
-function(x)
-{
-  ceiling(dim(x@band) / getBlockSize(x@band))
 })
 
 #' Raster blocks

@@ -175,9 +175,9 @@ DatasetH RGDAL_CreateCopy(DatasetH h, const char* fname, const char* dname,
 }
 
 // [[Rcpp::export]]
-std::vector<double> RGDAL_GetGeoTransform(DatasetH h)
+NumericVector RGDAL_GetGeoTransform(DatasetH h)
 {
-    std::vector<double> res(6, 0.0);
+    NumericVector res(6, 0.0);
     _(GDALGetGeoTransform(*h, &res[0]));
     return res;
 }
@@ -211,11 +211,11 @@ IntegerVector RGDAL_GetBlockSize(DatasetH h)
 }
 
 // [[Rcpp::export]]
-SEXP RGDAL_ReadRasterData(BandH h,
-                          int x, int y,
-                          int xszin, int yszin,
-                          int xszout, int yszout,
-                          int pixsp = 0, int lnsp = 0)
+NumericMatrix RGDAL_ReadRasterData(BandH h,
+                                   int x, int y,
+                                   int xszin, int yszin,
+                                   int xszout, int yszout,
+                                   int pixsp = 0, int lnsp = 0)
 {
   NumericVector buf(xszout * yszout);
   _(GDALRasterIO(*h, GF_Read, x, y, xszin, yszin, &buf[0],
@@ -262,6 +262,10 @@ SEXP RGDAL_ReadBlock(BandH h, int i, int j)
 {
     int xsz, ysz;
     GDALGetBlockSize(*h, &xsz, &ysz);
+    int nxb = std::ceil(GDALGetRasterBandXSize(*h) / xsz),
+        nyb = std::ceil(GDALGetRasterBandYSize(*h) / ysz);
+    if ( i < 1 || i > nyb || j < 1 || j > nxb )
+      stop("Invalid block indices");
     double scale = GDALGetRasterScale(*h, NULL), 
            offset = GDALGetRasterOffset(*h, NULL),
            nodata = GDALGetRasterNoDataValue(*h, NULL);
@@ -336,8 +340,10 @@ int RGDAL_WriteBlock(BandH h, int i, int j, SEXP blk)
     GDALGetBlockSize(*h, &xsz, &ysz);
     if ( Rf_length(blk) < xsz * ysz )
         stop("Input does not match block size\n");
-    std::cout << xsz << " " << ysz << " " << Rf_length(blk) << std::endl;
-    return 0;
+    int nxb = std::ceil(GDALGetRasterBandXSize(*h) / xsz),
+        nyb = std::ceil(GDALGetRasterBandYSize(*h) / ysz);
+    if ( i < 1 || i > nyb || j < 1 || j > nxb )
+      stop("Invalid block indices");
     GDALDataType dt = GDALGetRasterDataType(*h);
     switch ( dt )
     {

@@ -16,9 +16,9 @@ newRGDAL2RasterBand = function(handle, dataset)
     new("RGDAL2RasterBand", handle = handle, dataset = dataset)
 }
 
-newRGDAL2RasterMask = function(handle, dataset, flag)
+newRGDAL2RasterMask = function(handle, dataset)
 {
-    new("RGDAL2RasterMask", handle = handle, dataset = dataset, flag = flag)
+    new("RGDAL2RasterMask", handle = handle, dataset = dataset)
 }
 
 readDataset = function(x, i, j, k = 1L:nband(x), ii = i, jj = j, drop = TRUE)
