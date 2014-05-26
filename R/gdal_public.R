@@ -859,10 +859,16 @@ function(object)
 #' 
 #' @examples
 #' f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
-#' x = copyDataset(openDataset(f))
-#' b = readBlock(x, 1, 1)
-#' dim(b)
-#' writeBlock(x, 2, 1, b)
+#' x = openRasterBand(f)
+#' y = getBand(newDataset(nrow(x), ncol(x), dataType = "Int16",
+#'                        driver = "GTiff", opts = c("TILED=YES"),
+#'                        nosave = TRUE))
+#'                        
+#' for ( i in 1:nBlockRows(x) )
+#'   for ( j in 1:nBlockCols(x) )
+#'     writeBlock(y, i, j, readBlock(x, i, j))
+#'     
+#'  draw(y)
 #' 
 #' @rdname read-write-block
 #' @export
@@ -881,6 +887,33 @@ writeBlock = function(x, i, j, data)
   if ( RGDAL_WriteBlock(x@handle, i, j, data) )
     stop("Error writing band")
   invisible(x)
+}
+
+#' @return \code{nBlockRows}: number of blocks in y-direction
+#' @rdname read-write-block
+#' @export
+nBlockRows = function(x)
+{
+  x = checkBand(x)
+  nBlockDim(x)[1]
+}
+
+#' @return \code{nBlockCols}: number of blocks in x-direction
+#' @rdname read-write-block
+#' @export
+nBlockCols = function(x)
+{
+  x = checkBand(x)
+  nBlockDim(x)[2]
+}
+
+#' @return \code{nBlockDim}: number of blocks in x- and y- directions
+#' @rdname read-write-block
+#' @export
+nBlockDim = function(x)
+{
+  x = checkBand(x)
+  ceiling(dim(x) / getBlockSize(x))
 }
 
 #' Iterate over coordinate regions

@@ -17,8 +17,11 @@ Imports:
     foreach,
     RColorBrewer,
     grid
+Suggests:
+    testthat
 SystemRequirements: GDAL (>=1.10)
 LinkingTo: Rcpp
+Roxygen: list(wrap = TRUE)
 Collate:
     'RcppExports.R'
     'pkg.R'

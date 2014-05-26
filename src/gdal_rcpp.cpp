@@ -27,6 +27,7 @@ using namespace Rcpp;
 
 //
 // Kludge until I come up with something better
+// Update: this actually look like what is in R already
 //
 #if SIZEOF_INT * CHAR_BIT != 32
 #error "Integers must be 32bit"
@@ -40,6 +41,8 @@ using namespace Rcpp;
 // Returns errors to R
 // Note only case 4 actually returns immediately
 // Lower error codes are recoverable
+// Compile with -DCONTINUE_ON_ERROR to ignore fatal errors
+// This may be needed when running R under a different main loop
 //
 static void __err_handler(CPLErr eErrClass, int err_no, const char *msg)
 {
@@ -57,7 +60,7 @@ static void __err_handler(CPLErr eErrClass, int err_no, const char *msg)
         case 4:
             Rf_warning("GDAL Error %d: %s\n", err_no, msg);
             #ifndef CONTINUE_ON_ERROR
-            stop("Unrecoverable error\n");
+            stop("Unrecoverable GDAL error\n");
             #endif
             break;        
         default:
@@ -262,8 +265,8 @@ SEXP RGDAL_ReadBlock(BandH h, int i, int j)
 {
     int xsz, ysz;
     GDALGetBlockSize(*h, &xsz, &ysz);
-    int nxb = std::ceil(GDALGetRasterBandXSize(*h) / xsz),
-        nyb = std::ceil(GDALGetRasterBandYSize(*h) / ysz);
+    int nxb = 1 + GDALGetRasterBandXSize(*h) / xsz,
+        nyb = 1 + GDALGetRasterBandYSize(*h) / ysz;
     if ( i < 1 || i > nyb || j < 1 || j > nxb )
       stop("Invalid block indices");
     double scale = GDALGetRasterScale(*h, NULL), 
@@ -284,7 +287,7 @@ SEXP RGDAL_ReadBlock(BandH h, int i, int j)
                 res[x * ysz + y] =
                   pixv == nodata ? NA_INTEGER : scale * pixv + offset;
               }
-            return res;
+            return wrap(res);
           }
         case GDT_Float64:
           {
@@ -298,7 +301,7 @@ SEXP RGDAL_ReadBlock(BandH h, int i, int j)
                 res[x * ysz + y] =
                   pixv == nodata ? NA_REAL : scale * pixv + offset;
               }
-            return res;
+            return wrap(res);
           }
         case GDT_Byte:
           {
@@ -311,7 +314,7 @@ SEXP RGDAL_ReadBlock(BandH h, int i, int j)
                 double pixv = buf[y * xsz + x];
                 res[x * ysz + y] = scale * pixv + offset;
               }
-            return res;
+            return wrap(res);
           }
         case GDT_Int16:
           {
@@ -325,7 +328,7 @@ SEXP RGDAL_ReadBlock(BandH h, int i, int j)
                 res[x * ysz + y] =
                   pixv == nodata ? NA_INTEGER : scale * pixv + offset;
               }
-            return res;
+            return wrap(res);
           }
         default:
             stop("Unsupported data type in block read\n");
@@ -340,8 +343,8 @@ int RGDAL_WriteBlock(BandH h, int i, int j, SEXP blk)
     GDALGetBlockSize(*h, &xsz, &ysz);
     if ( Rf_length(blk) < xsz * ysz )
         stop("Input does not match block size\n");
-    int nxb = std::ceil(GDALGetRasterBandXSize(*h) / xsz),
-        nyb = std::ceil(GDALGetRasterBandYSize(*h) / ysz);
+    int nxb = 1 + GDALGetRasterBandXSize(*h) / xsz,
+        nyb = 1 + GDALGetRasterBandYSize(*h) / ysz;
     if ( i < 1 || i > nyb || j < 1 || j > nxb )
       stop("Invalid block indices");
     GDALDataType dt = GDALGetRasterDataType(*h);
@@ -631,7 +634,7 @@ static SEXP GetPointsInternal(OGRGeometryH hG)
           UNPROTECT(1);
         }
         break;
-      case 1:
+      case 1: 
         {
           OGRGeometryH hR = OGR_G_GetGeometryRef(hG, 0);
           res = GetPointsInternal(hR);
@@ -687,7 +690,7 @@ GeometryH RGDAL_GetGeomEnv(GeometryH h)
 }
 
 // [[Rcpp::export]]
-SEXP RGDAL_GetFIDs(LayerH h)
+NumericVector RGDAL_GetFIDs(LayerH h)
 {
     OGR_L_ResetReading(*h);
     int n = OGR_L_GetFeatureCount(*h, 1);
@@ -716,7 +719,7 @@ GeometryH RGDAL_F_GetGeometryRef(FeatureH h)
 }
 
 // [[Rcpp::export]]
-std::string RGDAL_G_GetGeometryType(GeometryH h)
+std::string RGDAL_G_GetGeometryType(GeometryH h)  // Change Type -> Name
 {
   return std::string(OGR_G_GetGeometryName(*h));  // needs to copy
 }
@@ -759,7 +762,7 @@ int GetLayerFieldCount(LayerH h)
 }
 
 // [[Rcpp::export]]
-SEXP GetFieldNames(LayerH h)
+CharacterVector GetFieldNames(LayerH h)
 {
   CharacterVector res;
   OGRFeatureDefnH f = OGR_L_GetLayerDefn(*h);
