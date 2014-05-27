@@ -3,25 +3,18 @@ rgdal2
 
 R bindings to GDAL/OGR
 
+**Please note: if you have tried previous versions, there was a serious bug in handling return values in Rcpp (whose behavior is largely undocumented upstream) that could crash the R session. Try this version.**
+
 This is a rewrite of my original rgdal bindings found in the package rgdal on CRAN.
 
 You need to install GDAL for this package to work. See http://www.gdal.org/. Binaries can be
 found easily using links on that site or using Google search. If typing 'gdal-config' on the
 command line does not do anything, this package will not install.
 
-I have modified the configure script to automatically build the Rcpp bindings and manual pages if
-they are missing. If you have Rcpp and roxygen2 installed, it should just work. Otherwise see below.
-
-To use this code, clone the repo, open the RStudio project file (rgdal2.Rproj) and choose build and install.
-You have to install roxygen2 and Rcpp.
-
 With the "devtools" package installed, the following R command builds the package on my platform: 
+
+devtools::install_github("roxygen2", "yihui")
 
 devtools::install_github("rgdal2", "thk686")
 
-Note that version 4 of roxygen2 has broken the package. ~~I might have to dump roxygen2.~~ Hadley has committed
-a patch to the devel version of roxygen2 that fixes the problem.
-
-Try
-
-install_github("roxygen2", "yihui")
+You might not need the line for roxygen2 if the CRAN version has been fixed.
