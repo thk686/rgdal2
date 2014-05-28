@@ -87,7 +87,7 @@ getPROJ4 = function(x)
 #' 
 #' @examples
 #' f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
-#' x = openGDALBand(f)
+#' x = openRasterBand(f)
 #' a = getSRS(x)
 #' show(a)
 #' y = copyDataset(x)
@@ -300,7 +300,7 @@ function(object, SRS)
 #' 
 #' @examples
 #' f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
-#' x = openGDAL(f)
+#' x = openDataset(f)
 #' show(grid.layout(1, 2))
 #' draw(x)
 #' y = reproject(x, newSRS("WGS84"))

@@ -63,7 +63,7 @@ geometryGrob = function(object, ..., units = "native")
 #' 
 #' @examples
 #' f = system.file("example-data/bee.jpg", package = "rgdal2")
-#' x = openGDAL(f)
+#' x = openDataset(f)
 #' draw(x)
 #'   
 #' @rdname draw

@@ -560,14 +560,14 @@ getBlockSize = function(x)
 #' This can be combined with the \code{ii} and \code{jj} parameters.
 #' 
 #' Data are always returned as R type \code{numeric}. The functions
-#' \code{\link{read-block-matrix}} and \code{\link{read-block-matrix}} are faster
+#' \code{\link{readBlock}} and \code{\link{writeBlock}} are faster
 #' and will return raw bytes, integer or numeric values depending on the type
 #' of data stored in the band. 
 #' 
-#' @seealso \code{\link{read-block-matrix}}
+#' @seealso \code{\link{readBlock}}
 #' 
 #' @examples
-#' x = newGDALBand(5, 5)
+#' x = newRasterBand(5, 5)
 #' x[]
 #' x[] = 1:25
 #' x[]
@@ -745,7 +745,7 @@ function(x, i)
 #' @seealso \code{\link{write-block-matrix}}
 #' 
 #' @examples
-#' x = newGDALBand(5, 5); x[]
+#' x = newRasterBand(5, 5); x[]
 #' x[] = 1:25; x[]
 #' x[2:3, 2:3] = matrix(101:125, 5, 5); x[]
 #' x[2:4, 2:4] = matrix(101:125, 5, 5); x[]
@@ -810,7 +810,7 @@ function(object)
 
 #' @examples
 #' f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
-#' x = openGDALBand(f)
+#' x = openRasterBand(f)
 #' extent(x)
 #' 
 #' @rdname extent
@@ -947,7 +947,7 @@ nBlockDim = function(x)
 #' show(a)
 #' show(b)
 #' 
-#' x = newGDALBand(9, 9)
+#' x = newRasterBand(9, 9)
 #' x[] = 1:81; x[]
 #' y = foreach.tile(x, tile.size = c(3, 3)) %do%
 #' {
@@ -1028,7 +1028,7 @@ tileIter = function(b, tile.size = getBlockSize(b), native.indexing = FALSE)
 #' @rdname tile
 #' @export
 foreach.tile = function(b,
-                        out = newGDALDataset(nrow(b), ncol(b)),
+                        out = newDataset(nrow(b), ncol(b)),
                         tile.size = getBlockSize(b),
                         init = getBand(out),
                         combine = NULL,
@@ -1074,14 +1074,14 @@ foreach.tile = function(b,
 #' 
 #' @examples
 #' f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
-#' x = openGDALBand(f)
+#' x = openRasterBand(f)
 #' getNoDataValue(x)
 #' y = copyDataset(x)
 #' getNoDataValue(y)
 #' setNoDataValue(y, -1)
 #' getNoDataValue(y)
 #' f = system.file("example-data/bee.jpg", package = "rgdal2")
-#' x = openGDAL(f)
+#' x = openDataset(f)
 #' getNoDataValue(x)
 #' 
 #' @rdname get-set-nodatavalue
@@ -1107,7 +1107,7 @@ setNoDataValue = function(object, no.data.value)
 #' @param domain the metadata domain
 #' 
 #' @examples
-#' x = newGDALDataset(10, 10)
+#' x = newDataset(10, 10)
 #' getMetadata(x)
 #' setMetadata(x, c("key1=value1", "key2=value2"))
 #' getMetadata(x)

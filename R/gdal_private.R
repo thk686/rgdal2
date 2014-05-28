@@ -7,6 +7,7 @@ NULL
 
 newRGDAL2Dataset = function(handle)
 {
+    if ( is.null(handle) ) return(handle)
     reg.finalizer(handle, RGDAL_Close, TRUE)
     new("RGDAL2Dataset", handle = handle)
 }

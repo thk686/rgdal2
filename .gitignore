@@ -10,5 +10,4 @@ config.log
 .DS_Store
 man
 NAMESPACE
-prep-for-build.Rout
 README.html

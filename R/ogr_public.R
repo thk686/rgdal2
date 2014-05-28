@@ -65,7 +65,7 @@ function(object)
 {
     ogrinfo = Sys.which('ogrinfo')
     dsname = RGDAL_DS_GetName(object@handle)
-    drname = RGDAL_GetDSDriverName(object@handle)
+    drname = RGDAL_GetOGRDriverName(object@handle)
     if ( nchar(ogrinfo) > 0 && drname != "Memory" )
     {
         info = pipe(paste(ogrinfo, '-so', dsname), 'rt')
@@ -228,7 +228,7 @@ function(object)
 {
     ogrinfo = Sys.which('ogrinfo')
     dsname = RGDAL_DS_GetName(object@datasource@handle)
-    drname = RGDAL_GetDSDriverName(object@datasource@handle)
+    drname = RGDAL_GetOGRDriverName(object@datasource@handle)
     lyrname = getLayerName(object)
     if ( nchar(ogrinfo) > 0 && drname != "Memory" )
     {

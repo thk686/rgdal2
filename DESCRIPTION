@@ -8,15 +8,15 @@ Maintainer: Tim Keitt <tkeitt@gmail.com>
 Description: Reads and writes GIS data files
 License: GPL
 Depends:
-    R (>= 3.0.0)
+    R (>= 3.0.0),
+    grid,
+    iterators,
+    foreach
 Imports:
     Rcpp (>= 0.10.6),
     methods,
     grDevices,
-    iterators,
-    foreach,
-    RColorBrewer,
-    grid
+    RColorBrewer
 Suggests:
     testthat
 SystemRequirements: GDAL (>=1.10)
