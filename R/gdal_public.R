@@ -258,7 +258,7 @@ copyTransform = function(obj1, obj2)
 #' 
 #' @return a raster band object
 #' 
-#' @seealso \code{\link{newRaster}}
+#' @seealso \code{\link{newDataset}}
 #' 
 #' @examples
 #' x = newRasterBand(100, 100)
@@ -300,8 +300,6 @@ getBand = function(x, band = 1L)
 }
 
 #' Fetch the dataset owning a raster band
-#' 
-#' @param x a raster band object
 #' 
 #' @details
 #' Raster bands are always associated with a dataset and cannot
@@ -738,11 +736,11 @@ function(x, i)
 #' is false, then their range of values will be interpreted as the matrix dimensions of
 #' \code{value}. When \code{native.indexing} is true, these arguments are ignored.
 #' 
-#' This method of writting data is much slower than \code{\link{write-block-matrix}}
-#' but will automatically cast the data to the correct type unlike \code{\link{write-block-matrix}}
+#' This method of writting data is much slower than \code{\link{writeBlock}}
+#' but will automatically cast the data to the correct type unlike \code{\link{writeBlock}}
 #' which requires the input to be of the correct \code{\link{storage.mode}}.
 #' 
-#' @seealso \code{\link{write-block-matrix}}
+#' @seealso \code{\link{writeBlock}}
 #' 
 #' @examples
 #' x = newRasterBand(5, 5); x[]
@@ -878,6 +876,7 @@ readBlock = function(x, i, j)
   RGDAL_ReadBlock(x@handle, i, j)
 }
 
+#' @param data an array or vector of data
 #' @return \code{writeBlock}: the raster band invisibly
 #' @rdname read-write-block
 #' @export
