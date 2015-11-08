@@ -1,0 +1,14 @@
+before_install:
+  - cd
+  - wget http://download.osgeo.org/gdal/2.0.1/gdal-2.0.1.tar.gz
+  - tar zxf gdal-2.0.1.tar.gz
+  - cd gdal-2.0.1
+  - ./configure
+  - make
+  - sudo make install
+  - cd /home/travis/build/edzer/rgdal2
+
+language: r
+sudo: required
+
+warnings_are_errors: false
