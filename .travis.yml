@@ -8,7 +8,6 @@ before_install:
   - sudo make install
   - cd /home/travis/build/edzer/rgdal2
 
-
 language: r
 sudo: required
 
