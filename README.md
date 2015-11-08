@@ -1,6 +1,8 @@
 rgdal2
 ======
 
+[![Build Status](https://travis-ci.org/edzer/rgdal2.png?branch=master)](https://travis-ci.org/edzer/rgdal2)
+
 R bindings to GDAL/OGR
 
 **Please note: if you have tried previous versions, there was a serious bug in handling return values in Rcpp (whose behavior is largely undocumented upstream) that could crash the R session. Try this version.**

@@ -23,7 +23,6 @@ SystemRequirements: GDAL (>=1.10)
 LinkingTo: Rcpp
 Roxygen: list(wrap = TRUE)
 Collate:
-    'RcppExports.R'
     'pkg.R'
     'defs.R'
     'gdal_private.R'
@@ -33,3 +32,4 @@ Collate:
     'ogr_public.R'
     'srs.R'
     'utils.R'
+RoxygenNote: 5.0.0
