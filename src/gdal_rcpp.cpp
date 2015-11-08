@@ -4,6 +4,7 @@
 #include <ogr_api.h>
 #include <ogr_srs_api.h>
 #include <cpl_conv.h>
+#include <cpl_string.h>
 
 #include <Rcpp.h>
 
@@ -21,8 +22,10 @@ using namespace Rcpp;
 #error "GDAL version 1 or greater required"
 #endif
 
-#if GDAL_VERSION_MINOR < 9
-#error "GDAL version 1.9 or greater required"
+#if GDAL_VERSION_MAJOR == 1
+# if GDAL_VERSION_MINOR < 9
+# error "GDAL version 1.9 or greater required"
+# endif
 #endif
 
 //
@@ -915,7 +918,7 @@ SEXP RGDAL_ApplyGeoTransform(DatasetH ds, SEXP point_list, int inverse)
     GDALGetGeoTransform(*ds, &(gt[0]));
     if ( inverse )
     {
-        GDALInvGeoTransform(&(gt[0]), &(igt[0]));
+        int i = GDALInvGeoTransform(&(gt[0]), &(igt[0]));
         gtrans = &(igt[0]);
     }
     else
@@ -1408,7 +1411,7 @@ std::vector<std::string> RGDAL_GetMetadataDomainList(DatasetH h)
 {
   char** mdl = GDALGetMetadataDomainList(*h);
   std::vector<std::string> res;
-  for ( char** i = mld; *i; ++i ) res.push_back(*i);
+  for ( char** i = mdl; *i; ++i ) res.push_back(*i);
   CSLDestroy(mdl);
   return res;
 }
