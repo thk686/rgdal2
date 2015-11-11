@@ -1,8 +1,8 @@
 Package: rgdal2
 Type: Package
 Title: Wraps the Geospatial Data Abstraction Library
-Version: 0.1
-Date: 2013-12-30
+Version: 0.2
+Date: 2015-11-11
 Author: Tim Keitt
 Maintainer: Tim Keitt <tkeitt@gmail.com>
 Description: Reads and writes GIS data files
@@ -32,4 +32,5 @@ Collate:
     'ogr_public.R'
     'srs.R'
     'utils.R'
+  	'RcppExports.R'
 RoxygenNote: 5.0.0
