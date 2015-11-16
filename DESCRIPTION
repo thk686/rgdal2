@@ -3,7 +3,8 @@ Type: Package
 Title: Wraps the Geospatial Data Abstraction Library
 Version: 0.2
 Date: 2015-11-11
-Author: Tim Keitt
+Authors@R: c(person("Timothy", "Keitt", email = "tkeitt@gmail.com", role = c("aut", "cre")),
+             person("Edzer", "Pebesma", email = "edzer.pebesma@uni-muenster.de", role = "ctb"))
 Maintainer: Tim Keitt <tkeitt@gmail.com>
 Description: Reads and writes GIS data files
 License: GPL
