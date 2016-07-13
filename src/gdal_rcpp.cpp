@@ -638,13 +638,13 @@ static SEXP GetPointsInternal(OGRGeometryH hG, int nested)
         }
         break;
       case 1: 
-	  	if (nested == 0) {
+        if (nested == 0) {
             {
               OGRGeometryH hR = OGR_G_GetGeometryRef(hG, 0);
               res = GetPointsInternal(hR, nested);
             }
             break;
-		} // else: fall through
+        } // else: fall through
       default:
         {
           res = PROTECT(Rf_allocVector(VECSXP, n));
