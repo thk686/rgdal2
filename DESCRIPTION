@@ -1,11 +1,11 @@
 Package: rgdal2
 Type: Package
-Title: Wraps the Geospatial Data Abstraction Library
+Title: Wraps the Geospatial Data Abstraction Library (GDAL)
 Version: 0.3
 Authors@R: c(person("Timothy", "Keitt", email = "tkeitt@gmail.com", role = c("aut", "cre")),
              person("Edzer", "Pebesma", email = "edzer.pebesma@uni-muenster.de", role = "ctb"))
 Maintainer: Tim Keitt <tkeitt@gmail.com>
-Description: Reads and writes GIS data files
+Description: Read and write GIS data using GDAL bindings.
 License: GPL
 Depends:
     R (>= 3.0.0),
@@ -32,5 +32,5 @@ Collate:
     'ogr_public.R'
     'srs.R'
     'utils.R'
-  	'RcppExports.R'
-RoxygenNote: 5.0.0
+	'RcppExports.R'
+RoxygenNote: 5.0.1

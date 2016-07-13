@@ -37,6 +37,8 @@
 #' @import methods
 #' @import grid
 #' @import grDevices
+#' @importFrom stats rnorm
+#' @importFrom utils download.file unzip
 NULL
 
 printPkgBanner = function()

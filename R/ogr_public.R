@@ -862,6 +862,18 @@ getGeometry = function(x)
     newRGDAL2Geometry(geom)
 }
 
+#' Fetch the geometry type from a feature
+#' 
+#' @param x the feature object
+#' 
+#' @return a lenght-one character vector
+#' 
+#' @export
+getGeometryType = function(x)
+{
+	RGDAL_G_GetGeometryType(x@handle)
+}
+
 #' Get the spatial reference system from a feature
 #' 
 #' @param object the object holding the SRS
@@ -940,6 +952,7 @@ function(x)
 #' 
 #' @param x a geometry object
 #' @param collapse if true, join point lists from all sub-geometries
+#' @param nested logical; if TRUE, return a more consistently nested list
 #' 
 #' @examples
 #' getPoints(POLYGON())
