@@ -947,10 +947,10 @@ function(x)
 #' getPoints(MULTIPOINT(), collapse = TRUE)
 #' 
 #' @export
-getPoints = function(x, collapse = FALSE)
+getPoints = function(x, collapse = FALSE, nested = FALSE)
 {
     assertClass(x, "RGDAL2Geometry")
-    res = RGDAL_GetPoints(x@handle)
+    res = if (nested) RGDAL_GetPointsNested(x@handle) else RGDAL_GetPoints(x@handle)
     if ( collapse )
         collapsePointList(res)
     else res
