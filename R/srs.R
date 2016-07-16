@@ -71,6 +71,13 @@ getWKT = function(x)
     RGDAL_GetWKT(x@handle)
 }
 
+
+#' Obtain PROJ.4 representation of an RGDAL2SpatialRef object
+#' 
+#' Obtain PROJ.4 representation of an RGDAL2SpatialRef object
+#'
+#' @param x object of class RGDAL2SpatialRef
+#' @export
 getPROJ4 = function(x)
 {
     assertClass(x, "RGDAL2SpatialRef")

@@ -17,7 +17,8 @@ Imports:
     iterators,
     RColorBrewer
 Suggests:
-    testthat
+    testthat,
+	roxygen2
 SystemRequirements: GDAL (>=1.10)
 LinkingTo: Rcpp
 Collate:
