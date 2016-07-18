@@ -10,7 +10,6 @@ before_install:
   - make
   - sudo make install
   - sudo ldconfig
-  - ls /usr/local/lib
   - cd $CURWD
 
 language: r
