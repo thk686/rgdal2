@@ -8,7 +8,7 @@ NULL
 newRGDAL2Datasource = function(handle)
 {
     if ( is.null(handle) ) return(NULL)
-    reg.finalizer(handle, RGDAL_ReleaseDataSource, TRUE)
+    # reg.finalizer(handle, RGDAL_ReleaseDataSource, TRUE)
     new("RGDAL2Datasource", handle = handle)
 }
 
@@ -22,21 +22,21 @@ newRGDAL2SQLLayer = function(handle, datasource, sql)
     if ( is.null(handle) ) return(NULL)
     f = function(lyrExtPtr)
       RGDAL_DS_ReleaseResultSet(datasource@handle, lyrExtPtr)
-    reg.finalizer(handle, f, TRUE)
+    # reg.finalizer(handle, f, TRUE)
     new("RGDAL2SQLLayer", handle = handle, datasource = datasource, sql = sql)
 }
 
 newRGDAL2Feature = function(handle)
 {
   if ( is.null(handle) ) return(NULL)
-  reg.finalizer(handle, RGDAL_F_Destroy, TRUE)
+  # reg.finalizer(handle, RGDAL_F_Destroy, TRUE)
   new("RGDAL2Feature", handle = handle)
 }
 
 newRGDAL2Geometry = function(handle)
 {
   if ( is.null(handle) ) return(NULL)
-  reg.finalizer(handle, RGDAL_G_DestroyGeometry, TRUE)
+  # reg.finalizer(handle, RGDAL_G_DestroyGeometry, TRUE)
   new("RGDAL2Geometry", handle = handle)
 }
 
