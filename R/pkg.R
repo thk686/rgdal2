@@ -37,6 +37,8 @@
 #' @import methods
 #' @import grid
 #' @import grDevices
+#' @importFrom stats rnorm
+#' @importFrom utils download.file unzip
 NULL
 
 printPkgBanner = function()
@@ -47,11 +49,11 @@ printPkgBanner = function()
     msgfun = packageStartupMessage
     n = 42
     bling = function(n) msgfun(paste(rep("~", n), collapse = "."))
-    bling(n);
-    msgfun("\trgal2: a KeittLab production (http://www.keittlab.org/)")
-    msgfun(paste0("\tCompiled against GDAL version: ", versionInfo()))
-    msgfun("\tSet options(suppress.package.banners = TRUE) to load quietly")
-    bling(n)
+    #bling(n);
+    #msgfun("\trgal2: a KeittLab production (http://www.keittlab.org/)")
+    msgfun(paste0("Linking to ", versionInfo()))
+    #msgfun("\tSet options(suppress.package.banners = TRUE) to load quietly")
+    #bling(n)
   }
 }
 

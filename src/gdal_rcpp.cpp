@@ -622,7 +622,7 @@ static void attachNames(SEXP x)
     return;
 }
 
-static SEXP GetPointsInternal(OGRGeometryH hG)
+static SEXP GetPointsInternal(OGRGeometryH hG, int nested)
 {
     SEXP res;
     int n = OGR_G_GetGeometryCount(hG);
@@ -638,18 +638,20 @@ static SEXP GetPointsInternal(OGRGeometryH hG)
         }
         break;
       case 1: 
-        {
-          OGRGeometryH hR = OGR_G_GetGeometryRef(hG, 0);
-          res = GetPointsInternal(hR);
-        }
-        break;
+        if (nested == 0) {
+            {
+              OGRGeometryH hR = OGR_G_GetGeometryRef(hG, 0);
+              res = GetPointsInternal(hR, nested);
+            }
+            break;
+        } // else: fall through
       default:
         {
           res = PROTECT(Rf_allocVector(VECSXP, n));
           for ( int i = 0; i != n; ++i )
           {
               OGRGeometryH hR = OGR_G_GetGeometryRef(hG, i);
-              SET_VECTOR_ELT(res, i, GetPointsInternal(hR));
+              SET_VECTOR_ELT(res, i, GetPointsInternal(hR, nested));
           }
           UNPROTECT(1);
         }
@@ -661,7 +663,13 @@ static SEXP GetPointsInternal(OGRGeometryH hG)
 // [[Rcpp::export]]
 SEXP RGDAL_GetPoints(GeometryH h)
 {
-  return GetPointsInternal(*h);
+  return GetPointsInternal(*h, 0);
+}
+
+// [[Rcpp::export]]
+SEXP RGDAL_GetPointsNested(GeometryH h)
+{
+  return GetPointsInternal(*h, 1);
 }
 
 // [[Rcpp::export]]

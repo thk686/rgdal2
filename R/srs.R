@@ -11,7 +11,7 @@ NULL
 
 newRGDAL2SpatialRef = function(handle)
 {
-    reg.finalizer(handle, RGDAL_OSRRelease)
+    # reg.finalizer(handle, RGDAL_OSRRelease, TRUE)
     new("RGDAL2SpatialRef", handle = handle)
 }
 
@@ -71,6 +71,13 @@ getWKT = function(x)
     RGDAL_GetWKT(x@handle)
 }
 
+
+#' Obtain PROJ.4 representation of an RGDAL2SpatialRef object
+#' 
+#' Obtain PROJ.4 representation of an RGDAL2SpatialRef object
+#'
+#' @param x object of class RGDAL2SpatialRef
+#' @export
 getPROJ4 = function(x)
 {
     assertClass(x, "RGDAL2SpatialRef")
@@ -222,13 +229,13 @@ function(object, SRS)
 #' 
 #' g = getGeometries(x)
 #' draw(reproject(graticule(), getSRS(x)))
-#' invisible(lapply(g, draw, overlay = TRUE, gp = gpar(fill = "lightblue")))
-#' grid.text("WGS84 projection (lon-lat)", y = 1.1)
+#' invisible(lapply(g, draw, overlay = TRUE, gp = grid::gpar(fill = "lightblue")))
+#' grid::grid.text("WGS84 projection (lon-lat)", y = 1.1)
 #'    
 #' g = lapply(g, reproject, "Robinson")
 #' draw(reproject(graticule(), "Robinson"))
-#' invisible(lapply(g, draw, overlay = TRUE, gp = gpar(fill = "lightblue")))
-#' grid.text("Robinson projection", y = 1.1)
+#' invisible(lapply(g, draw, overlay = TRUE, gp = grid::gpar(fill = "lightblue")))
+#' grid::grid.text("Robinson projection", y = 1.1)
 #' 
 #' @aliases reproject-geometry
 #' @rdname reproject-vector
@@ -301,7 +308,7 @@ function(object, SRS)
 #' @examples
 #' f = system.file("example-data/gtopo30_gall.tif", package = "rgdal2")
 #' x = openDataset(f)
-#' show(grid.layout(1, 2))
+#' show(grid::grid.layout(1, 2))
 #' draw(x)
 #' y = reproject(x, newSRS("WGS84"))
 #' draw(y)

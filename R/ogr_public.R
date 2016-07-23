@@ -173,7 +173,7 @@ function(object)
 #' f = system.file("example-data/continents", package = "rgdal2")
 #' x = openOGRLayer(f)
 #' show(x)
-#' draw(x, gp = gpar(fill = "lightblue"))
+#' draw(x, gp = grid::gpar(fill = "lightblue"))
 #' 
 #' @export
 openOGRLayer = function(fname, layer = 1L, readonly = TRUE)
@@ -600,6 +600,7 @@ getGeometries = function(x)
 #' @examples
 #' f = system.file("example-data/continents", package = "rgdal2")
 #' x = openOGRLayer(f)
+#' if (require(foreach)) {
 #' y = foreach(i = featureIter(x),
 #'             .init = data.frame(),
 #'             .combine = rbind) %do% getFields(i)
@@ -607,6 +608,7 @@ getGeometries = function(x)
 #' show(y)
 #' 
 #' foreach(i = geometryIter(x, reset = TRUE), .combine = c) %do% area(i)
+#' }
 #' 
 #' @rdname layer-iters
 #' @export
@@ -862,6 +864,18 @@ getGeometry = function(x)
     newRGDAL2Geometry(geom)
 }
 
+#' Fetch the geometry type from a feature
+#' 
+#' @param x the feature object
+#' 
+#' @return a lenght-one character vector
+#' 
+#' @export
+getGeometryType = function(x)
+{
+	RGDAL_G_GetGeometryType(x@handle)
+}
+
 #' Get the spatial reference system from a feature
 #' 
 #' @param object the object holding the SRS
@@ -940,6 +954,7 @@ function(x)
 #' 
 #' @param x a geometry object
 #' @param collapse if true, join point lists from all sub-geometries
+#' @param nested logical; if TRUE, return a more consistently nested list
 #' 
 #' @examples
 #' getPoints(POLYGON())
@@ -947,10 +962,10 @@ function(x)
 #' getPoints(MULTIPOINT(), collapse = TRUE)
 #' 
 #' @export
-getPoints = function(x, collapse = FALSE)
+getPoints = function(x, collapse = FALSE, nested = FALSE)
 {
     assertClass(x, "RGDAL2Geometry")
-    res = RGDAL_GetPoints(x@handle)
+    res = if (nested) RGDAL_GetPointsNested(x@handle) else RGDAL_GetPoints(x@handle)
     if ( collapse )
         collapsePointList(res)
     else res
@@ -1064,34 +1079,34 @@ function(object)
 #' 
 #' x1 %distance% x2 
 #' 
-#' gp1 = gpar(lwd = 6, lty = 2, col = rgb(1, 0, 0, 0.5), fill = NA)
-#' gp2 = gpar(lwd = 6, lty = 2, col = rgb(0, 1, 0, 0.5), fill = NA)
-#' gp3 = gpar(lwd = 6, col = rgb(0, 0, 1, 0.5), fill = rgb(0, 0, 1, 0.25))
+#' gp1 = grid::gpar(lwd = 6, lty = 2, col = rgb(1, 0, 0, 0.5), fill = NA)
+#' gp2 = grid::gpar(lwd = 6, lty = 2, col = rgb(0, 1, 0, 0.5), fill = NA)
+#' gp3 = grid::gpar(lwd = 6, col = rgb(0, 0, 1, 0.5), fill = rgb(0, 0, 1, 0.25))
 #' roi = extent(x1 %union% x2)
 #' 
 #' x3 = x1 %intersection% x2
 #' draw(x1, region = roi, gp = gp1)
 #' draw(x2, gp = gp2, overlay = TRUE)
 #' draw(x3,  gp = gp3, overlay = TRUE)
-#' grid.text("intersection")
+#' grid::grid.text("intersection")
 #' 
 #' x3 = x1 %union% x2
 #' draw(x1, region = roi, gp = gp1)
 #' draw(x2, gp = gp2, overlay = TRUE)
 #' draw(x3,  gp = gp3, overlay = TRUE)
-#' grid.text("union")
+#' grid::grid.text("union")
 #' 
 #' x3 = x1 %difference% x2
 #' draw(x1, region = roi, gp = gp1)
 #' draw(x2, gp = gp2, overlay = TRUE)
 #' draw(x3,  gp = gp3, overlay = TRUE)
-#' grid.text("difference")
+#' grid::grid.text("difference")
 #' 
 #' x3 = x1 %symdiff% x2
 #' draw(x1, region = roi, gp = gp1)
 #' draw(x2, gp = gp2, overlay = TRUE)
 #' draw(x3,  gp = gp3, overlay = TRUE)
-#' grid.text("symmetric difference")
+#' grid::grid.text("symmetric difference")
 #' 
 #' MULTIPOLYGON() %append% x1 %append% x2
 #' 
@@ -1246,7 +1261,7 @@ function(object)
 #' unionCascaded(y)
 #' lineLength(LINESTRING(x = c(0, 1), y = c(0, 1)))
 #' area(y)
-#' draw(simplify(y, 2), overlay = TRUE, gp = gpar(fill = NA))
+#' draw(simplify(y, 2), overlay = TRUE, gp = grid::gpar(fill = NA))
 #' polygonize(x)
 #' draw(buffer(y, 1))
 #' draw(y, overlay = TRUE)

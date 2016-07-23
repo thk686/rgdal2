@@ -287,7 +287,7 @@ current.viewport.aspect = function()
 #' f = system.file("example-data/continents", package = "rgdal2")
 #' x = openOGRLayer(f)
 #' draw(graticule())
-#' draw(x, gp = gpar(fill = "lightblue"), overlay = TRUE)
+#' draw(x, gp = grid::gpar(fill = "lightblue"), overlay = TRUE)
 #' 
 #' @export
 graticule = function(dlat = 10, dlon = 10, linc = 1)
