@@ -13,4 +13,9 @@ command line does not do anything, this package will not install.
 
 With the "devtools" package installed, the following R command builds the package on my platform: 
 
-devtools::install_github("rgdal2", "thk686")
+``` r
+if (packageVersion("devtools") < 1.6) {
+install.packages("devtools")
+}
+devtools::install_github("thk686/rgdal2")
+```
