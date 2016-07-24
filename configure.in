@@ -32,10 +32,10 @@ else
 	exit 1
 fi
 
-if test ! -e src/RcppExports.cpp
-then
+#if test ! -e src/RcppExports.cpp
+#then
   ${R_HOME}/bin/Rscript -e "Rcpp:::compileAttributes()"
-fi
+#fi
 
 if test ! -e src/RcppExports.cpp
 then
