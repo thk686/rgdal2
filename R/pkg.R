@@ -57,14 +57,13 @@ printPkgBanner = function()
   }
 }
 
-.onAttach = function(libname, pkgname)
+.onLoad = function(libname, pkgname)
 {
     printPkgBanner()
     GDALInit()
 }
 
-.onDetach = function(libpath)
+.onUnload = function(libname, pkgname)
 {
   RGDAL_CleanupAll()
 }
-

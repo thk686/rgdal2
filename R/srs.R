@@ -11,7 +11,7 @@ NULL
 
 newRGDAL2SpatialRef = function(handle)
 {
-    # reg.finalizer(handle, RGDAL_OSRRelease, TRUE)
+    reg.finalizer(handle, RGDAL_OSRRelease, FALSE)
     new("RGDAL2SpatialRef", handle = handle)
 }
 

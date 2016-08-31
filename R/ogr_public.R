@@ -27,7 +27,7 @@ NULL
 openOGR = function(fname, readonly = TRUE)
 {
     x = RGDAL_OGROpen(fname, readonly)
-    if ( is.null(x) ) stop("Unable to open file")
+    if ( is.null(x) ) stop(paste("Unable to open file", fname))
     newRGDAL2Datasource(x)
 }
 

@@ -983,6 +983,7 @@ void RGDALWriteRasterBand(BandH hRB, SEXP data,
                           int nDSXOff, int nDSYOff,
                           int nDSXSize, int nDSYSize)
 {
+	CPLErr err;
     if ( GDALGetRasterAccess(*hRB) == GA_ReadOnly )
         stop("Raster band is read-only\n");
     void* buf;
@@ -995,7 +996,7 @@ void RGDALWriteRasterBand(BandH hRB, SEXP data,
         for ( size_t r = 0; r != nr; ++r )
             for ( size_t c = 0; c != nc; ++c )
                 ((int*)buf)[r * nc + c] = scale * INTEGER(data)[c * nr + r] - offset;
-        GDALRasterIO(*hRB, GF_Write,
+        err = GDALRasterIO(*hRB, GF_Write,
                      nDSXOff, nDSYOff,
                      nDSXSize, nDSYSize,
                      buf, nc, nr, GDT_Int32,
@@ -1008,13 +1009,14 @@ void RGDALWriteRasterBand(BandH hRB, SEXP data,
         for ( size_t r = 0; r != nr; ++r )
             for ( size_t c = 0; c != nc; ++c )
                 ((double*)buf)[r * nc + c] = scale * REAL(data)[c * nr + r] - offset;
-        GDALRasterIO(*hRB, GF_Write,
+        err = GDALRasterIO(*hRB, GF_Write,
                      nDSXOff, nDSYOff,
                      nDSXSize, nDSYSize,
                      buf, nc, nr, GDT_Float64,
                      0, 0);
         return;
     }
+	// EJP TODO: do something with err, if needed?
     stop("Unsupported data type\n");
 }
 
