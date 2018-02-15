@@ -9,5 +9,4 @@ config.status
 config.log
 .DS_Store
 man
-NAMESPACE
 README.html

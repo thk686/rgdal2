@@ -1,7 +1,7 @@
 Package: rgdal2
 Type: Package
 Title: Wraps the Geospatial Data Abstraction Library (GDAL)
-Version: 0.3
+Version: 0.3.1
 Authors@R: c(person("Timothy", "Keitt", email = "tkeitt@gmail.com", role = c("aut", "cre")),
              person("Edzer", "Pebesma", email = "edzer.pebesma@uni-muenster.de", role = "ctb"))
 Maintainer: Tim Keitt <tkeitt@gmail.com>
@@ -18,7 +18,7 @@ Imports:
     RColorBrewer
 Suggests:
     testthat,
-	roxygen2
+	  roxygen2
 SystemRequirements: GDAL (>=1.10)
 LinkingTo: Rcpp
 Collate:
@@ -32,4 +32,4 @@ Collate:
     'ogr_public.R'
     'srs.R'
     'utils.R'
-RoxygenNote: 5.0.1
+RoxygenNote: 6.0.1.9000

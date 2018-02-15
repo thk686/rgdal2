@@ -937,7 +937,7 @@ nBlockDim = function(x)
 #' a = matrix(rep(1:5, each = 5), 5, 5)
 #' b = matrix(NA, 5, 5)
 #' 
-#  if (require(foreach)) {
+#' if (require(foreach)) {
 #' invisible(
 #' foreach(i = tileCoordIter(a, 2)) %do%
 #' {
